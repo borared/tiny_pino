@@ -1,0 +1,141 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using TMPro;
+
+public class PlayerPickup : MonoBehaviour
+{
+    private Rigidbody box;
+    private Collider boxCollider;
+    public Transform holdPoint;
+    public TMP_Text prompt;
+    public float pickupDistance = 3f;
+    public float followStrength = 10f;
+    public float maxCarrySpeed = 50f;
+
+    private RigidbodyConstraints originalConstraints;
+    private bool holdingBox;
+
+    void Start()
+    {
+        prompt.gameObject.SetActive(false);
+    }
+
+    void Update()
+    {
+        // Measure distance to the box's surface.
+        if (!holdingBox)
+        {
+            FindNearestBox();
+        }
+
+        bool nearby = box != null;
+
+        prompt.gameObject.SetActive(nearby || holdingBox);
+        prompt.text = holdingBox
+            ? "Press F to drop"
+            : "Press F to pick up";
+
+        Keyboard keyboard = Keyboard.current;
+
+        if (keyboard == null || !keyboard.fKey.wasPressedThisFrame)
+            return;
+
+        if (holdingBox)
+        {
+            DropBox();
+        }
+        else if (nearby)
+        {
+            PickUpBox();
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (!holdingBox)
+            return;
+
+        Vector3 difference =
+            holdPoint.position - box.worldCenterOfMass;
+
+        Vector3 desiredVelocity = difference * followStrength;
+
+        box.linearVelocity = Vector3.ClampMagnitude(
+            desiredVelocity,
+            maxCarrySpeed
+        );
+    }
+
+    void PickUpBox()
+    {
+        holdingBox = true;
+        originalConstraints = box.constraints;
+
+        box.isKinematic = false;
+        box.detectCollisions = true;
+        box.useGravity = false;
+
+        box.linearVelocity = Vector3.zero;
+        box.angularVelocity = Vector3.zero;
+        box.constraints = RigidbodyConstraints.FreezeRotation;
+
+        // Ignore the player's body while carrying.
+        Physics.IgnoreCollision(
+            boxCollider,
+            GetComponent<CharacterController>(),
+            true
+        );
+    }
+
+    void DropBox()
+    {
+        holdingBox = false;
+
+        box.useGravity = true;
+        box.constraints = originalConstraints;
+        box.linearVelocity = Vector3.zero;
+        box.angularVelocity = Vector3.zero;
+
+        Physics.IgnoreCollision(
+            boxCollider,
+            GetComponent<CharacterController>(),
+            false
+        );
+    }
+
+    void FindNearestBox()
+    {
+        box = null;
+        boxCollider = null;
+
+        float closestDistance = pickupDistance;
+
+        Collider[] nearbyColliders = Physics.OverlapSphere(
+            transform.position,
+            pickupDistance,
+            Physics.AllLayers,
+            QueryTriggerInteraction.Ignore
+        );
+
+        foreach (Collider candidate in nearbyColliders)
+        {
+            Rigidbody body = candidate.attachedRigidbody;
+
+            if (body == null || !body.CompareTag("Pickupable"))
+                continue;
+
+            Vector3 nearestPoint =
+                candidate.ClosestPoint(transform.position);
+
+            float distance =
+                Vector3.Distance(transform.position, nearestPoint);
+
+            if (distance <= closestDistance)
+            {
+                closestDistance = distance;
+                box = body;
+                boxCollider = candidate;
+            }
+        }
+    }
+}
