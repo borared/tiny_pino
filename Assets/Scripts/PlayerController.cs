@@ -104,6 +104,12 @@ public class PlayerController : MonoBehaviour
 
     void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        //fan switch
+        if (verticalVelocity > 0f && hit.collider.TryGetComponent<FanSwitch>(out var fanSwitch))
+        {
+            fanSwitch.FlipUp();
+        }
+        
         //fan
         if (fanSurface != null && hit.collider.transform.IsChildOf(fanSurface) && hit.moveDirection.y < 0f && hit.normal.y > 0.5f)
         {
@@ -131,6 +137,6 @@ public class PlayerController : MonoBehaviour
         float impulse = Mathf.Min(pushForce * Time.deltaTime, remainingSpeed * box.mass);
         box.AddForce(walkDirection * impulse, ForceMode.Impulse);
 
-
+        
     }
 }
