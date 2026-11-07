@@ -8705,6 +8705,8 @@ MonoBehaviour:
   speed: 35
   jumpHeight: 13
   gravity: -175
+  pushForce: 150
+  maxPushSpeed: 10
 --- !u!114 &1494712157
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9704,15 +9706,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 6116091731290110029, guid: ce848cbf7370e7b4198c9a476ebc534a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -588.2256
+      value: -606.54
       objectReference: {fileID: 0}
     - target: {fileID: 6116091731290110029, guid: ce848cbf7370e7b4198c9a476ebc534a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.3999962
+      value: 4.85
       objectReference: {fileID: 0}
     - target: {fileID: 6116091731290110029, guid: ce848cbf7370e7b4198c9a476ebc534a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 123.061874
+      value: 102.4
       objectReference: {fileID: 0}
     - target: {fileID: 6116091731290110029, guid: ce848cbf7370e7b4198c9a476ebc534a, type: 3}
       propertyPath: m_LocalRotation.w

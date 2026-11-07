@@ -7,10 +7,13 @@ public class PlayerController : MonoBehaviour
     public float speed = 35f;
     public float jumpHeight = 2f;
     public float gravity = -20f;
-
     private float verticalVelocity;
 
+    public float pushForce = 150f;
+    public float maxPushSpeed = 10f;
+
     private CharacterController controller;
+    private Vector3 walkDirection;
 
     void Awake()
     {
@@ -48,8 +51,8 @@ public class PlayerController : MonoBehaviour
         }
 
         // Horizontal movement relative to the player's facing direction.
-        Vector3 movement =
-            transform.TransformDirection(direction.normalized) * speed;
+        walkDirection = transform.TransformDirection(direction.normalized);
+        Vector3 movement = walkDirection * speed;
 
         // Gravity changes vertical speed over time.
         verticalVelocity += gravity * Time.deltaTime;
@@ -63,5 +66,29 @@ public class PlayerController : MonoBehaviour
         {
             verticalVelocity = 0f;
         }
+    }
+
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        Rigidbody box = hit.collider.attachedRigidbody;
+
+        if (box == null || box.isKinematic || !box.CompareTag("Pickupable"))
+            return;
+
+        // Skip the top of the box so landing on it doesn't push it.
+        if (hit.normal.y > 0.5f)
+            return;
+
+        // Use the intended walking direction, even if the box stopped the controller.
+        if (Vector3.Dot(walkDirection, hit.normal) >= -0.01f)
+            return;
+
+        float remainingSpeed =
+            maxPushSpeed - Vector3.Dot(box.linearVelocity, walkDirection);
+        if (remainingSpeed <= 0f)
+            return;
+
+        float impulse = Mathf.Min(pushForce * Time.deltaTime, remainingSpeed * box.mass);
+        box.AddForce(walkDirection * impulse, ForceMode.Impulse);
     }
 }
