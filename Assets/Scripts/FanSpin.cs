@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[DefaultExecutionOrder(-10)]
 public class FanSpin : MonoBehaviour
 {
     public float speed = 50f;
