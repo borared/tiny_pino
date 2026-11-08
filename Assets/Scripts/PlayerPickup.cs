@@ -16,6 +16,9 @@ public class PlayerPickup : MonoBehaviour
     private RigidbodyConstraints originalConstraints;
     private bool holdingBox;
 
+    //box outline
+    private InteractionOutline currentOutline;
+
     //fan
     [SerializeField] private FanSwitch fanSwitch;
     [SerializeField] private float switchDistance = 12f;
@@ -34,6 +37,16 @@ public class PlayerPickup : MonoBehaviour
             FindNearestBox();
 
         bool nearBox = box != null;
+
+        InteractionOutline nextOutline = null;
+
+        if (nearSwitch)
+            nextOutline = fanSwitch.GetComponent<InteractionOutline>();
+        else if (!holdingBox && nearBox)
+            nextOutline = box.GetComponent<InteractionOutline>();
+
+        SetOutline(nextOutline);
+
         prompt.gameObject.SetActive(holdingBox || nearSwitch || nearBox);
 
         if (holdingBox)
@@ -76,6 +89,7 @@ public class PlayerPickup : MonoBehaviour
     void PickUpBox()
     {
         holdingBox = true;
+        SetOutline(null);
         originalConstraints = box.constraints;
 
         box.isKinematic = false;
@@ -144,5 +158,24 @@ public class PlayerPickup : MonoBehaviour
                 boxCollider = candidate;
             }
         }
+    }
+
+    private void SetOutline(InteractionOutline next)
+    {
+        if (currentOutline == next)
+            return;
+
+        if (currentOutline != null)
+            currentOutline.SetVisible(false);
+
+        currentOutline = next;
+
+        if (currentOutline != null)
+            currentOutline.SetVisible(true);
+    }
+
+    private void OnDisable()
+    {
+        SetOutline(null);
     }
 }
