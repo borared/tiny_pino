@@ -4,6 +4,7 @@ using TMPro;
 
 public class PlayerPickup : MonoBehaviour
 {
+    //box pick up
     private Rigidbody box;
     private Collider boxCollider;
     public Transform holdPoint;
@@ -15,6 +16,10 @@ public class PlayerPickup : MonoBehaviour
     private RigidbodyConstraints originalConstraints;
     private bool holdingBox;
 
+    //fan
+    [SerializeField] private FanSwitch fanSwitch;
+    [SerializeField] private float switchDistance = 12f;
+
     void Start()
     {
         prompt.gameObject.SetActive(false);
@@ -22,32 +27,34 @@ public class PlayerPickup : MonoBehaviour
 
     void Update()
     {
-        // Measure distance to the box's surface.
+        bool nearSwitch = !holdingBox && fanSwitch != null &&
+            fanSwitch.IsInRange(transform.position, switchDistance);
+
         if (!holdingBox)
-        {
             FindNearestBox();
-        }
 
-        bool nearby = box != null;
+        bool nearBox = box != null;
+        prompt.gameObject.SetActive(holdingBox || nearSwitch || nearBox);
 
-        prompt.gameObject.SetActive(nearby || holdingBox);
-        prompt.text = holdingBox
-            ? "Press F to drop"
-            : "Press F to pick up";
+        if (holdingBox)
+            prompt.text = "Press F to drop";
+        else if (nearSwitch)
+            prompt.text = fanSwitch.IsOn
+                ? "Press F to turn off switch"
+                : "Press F to turn on switch";
+        else
+            prompt.text = "Press F to pick up";
 
         Keyboard keyboard = Keyboard.current;
-
         if (keyboard == null || !keyboard.fKey.wasPressedThisFrame)
             return;
 
         if (holdingBox)
-        {
             DropBox();
-        }
-        else if (nearby)
-        {
+        else if (nearSwitch)
+            fanSwitch.Toggle();
+        else if (nearBox)
             PickUpBox();
-        }
     }
 
     void FixedUpdate()
