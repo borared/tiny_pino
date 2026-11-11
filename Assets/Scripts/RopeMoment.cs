@@ -185,6 +185,11 @@ public class RopeMoment : MonoBehaviour
         }
     }
 
+    public void AddGrabBend(Vector3 handleVelocityChange)
+    {
+        currentVelocity -= handleVelocityChange * 2f;
+    }
+
     public Vector3 GetPointAt(float t)
     {
         if (!IsEndpointsValid)

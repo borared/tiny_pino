@@ -4,6 +4,10 @@ using TMPro;
 
 public class PlayerPickup : MonoBehaviour
 {
+    //rope interact
+    [SerializeField] private float ropeGrabDistance = 3f;
+    private PlayerController ropePlayer;
+
     //box pick up
     private Rigidbody box;
     private Collider boxCollider;
@@ -25,11 +29,14 @@ public class PlayerPickup : MonoBehaviour
 
     void Start()
     {
+        ropePlayer = GetComponent<PlayerController>();
         prompt.gameObject.SetActive(false);
     }
 
     void Update()
     {
+        if (TryHandleRope())
+            return;
         bool nearSwitch = !holdingBox && fanSwitch != null &&
             fanSwitch.IsInRange(transform.position, switchDistance);
 
@@ -177,5 +184,57 @@ public class PlayerPickup : MonoBehaviour
     private void OnDisable()
     {
         SetOutline(null);
+    }
+
+    private bool TryHandleRope()
+    {
+        bool holdingRope = ropePlayer.IsHoldingRope;
+        Collider handle = !holdingBox && ropePlayer.CanGrabRope
+            ? FindNearestRopeHandle()
+            : null;
+
+        if (!holdingRope && handle == null)
+            return false;
+
+        SetOutline(null);
+        prompt.gameObject.SetActive(true);
+        prompt.text = holdingRope ? "Press F to release rope" : "Press F to grab rope";
+
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null && keyboard.fKey.wasPressedThisFrame)
+            ropePlayer.InteractWithRope(handle);
+
+        return true;
+    }
+
+    private Collider FindNearestRopeHandle()
+    {
+        Collider nearest = null;
+        float bestDistance = float.PositiveInfinity;
+
+        foreach (Collider candidate in Physics.OverlapSphere(
+            transform.position, ropeGrabDistance, Physics.AllLayers,
+            QueryTriggerInteraction.Ignore))
+        {
+            Rigidbody body = candidate.attachedRigidbody;
+            if (body == null || body.isKinematic ||
+                !body.TryGetComponent<RopeSwingEnd>(out var rope) ||
+                !rope.isActiveAndEnabled ||
+                !body.TryGetComponent<ConfigurableJoint>(out _))
+            {
+                continue;
+            }
+
+            float distance = (candidate.ClosestPoint(transform.position)
+                              - transform.position).sqrMagnitude;
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                nearest = candidate;
+            }
+        }
+
+        return nearest;
     }
 }
