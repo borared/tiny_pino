@@ -14,10 +14,10 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 0
+  m_Fog: 1
   m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.01
+  m_FogDensity: 0.0025
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
@@ -25,7 +25,7 @@ RenderSettings:
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
   m_AmbientMode: 0
-  m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
+  m_SubtractiveShadowColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
   m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
@@ -35,7 +35,7 @@ RenderSettings:
   m_DefaultReflectionMode: 0
   m_DefaultReflectionResolution: 128
   m_ReflectionBounces: 1
-  m_ReflectionIntensity: 1
+  m_ReflectionIntensity: 0
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
   m_UseRadianceAmbientProbe: 0
@@ -1664,6 +1664,79 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3833e6efa5cd75e4db363f80385aafa7, type: 3}
   m_PrefabInstance: {fileID: 272114250}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &278470575
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 647.36
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 647.36
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 647.36
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -548.28
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 92.15
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.86
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.000000081460335
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 88247f8566d464840b826544f1d36eaa, type: 2}
+    - target: {fileID: 919132149155446097, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
+      propertyPath: m_Name
+      value: lantern_hanging
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8afdfaa6a39f29a46b5c1a73e34ac70c, type: 3}
 --- !u!65 &289111035
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2601,7 +2674,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 0, b: 0, a: 1}
   m_Intensity: 2
   m_Range: 10
   m_SpotAngle: 30
@@ -2645,7 +2718,7 @@ Light:
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1
-  m_ColorTemperature: 5000
+  m_ColorTemperature: 5500
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
@@ -2665,7 +2738,7 @@ Transform:
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
   m_LocalRotation: {x: -0.27991134, y: 0.0540584, z: 0.59709746, w: 0.74980134}
-  m_LocalPosition: {x: -430, y: 3, z: 0}
+  m_LocalPosition: {x: -552.1, y: 86.2, z: 13.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10843,3 +10916,4 @@ SceneRoots:
   - {fileID: 228874655}
   - {fileID: 1782460632}
   - {fileID: 731167618}
+  - {fileID: 278470575}
