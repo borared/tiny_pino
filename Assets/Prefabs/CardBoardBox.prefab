@@ -124,19 +124,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.661135
+      value: 0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.6611352
+      value: -0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.25079942
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.25079945
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -148,7 +148,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 41.548
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       propertyPath: m_Name
@@ -174,6 +174,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8387590591166946671}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6452032784661631125}
   m_SourcePrefab: {fileID: 100100000, guid: 7dbecb8ff2907004f8dba5dc9e3cfd56, type: 3}
 --- !u!4 &6116091731290110029 stripped
 Transform:
@@ -194,8 +197,8 @@ Rigidbody:
   m_GameObject: {fileID: 6893719837444432631}
   serializedVersion: 5
   m_Mass: 5
-  m_LinearDamping: 0.5
-  m_AngularDamping: 2
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -210,7 +213,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 48
+  m_Constraints: 0
   m_CollisionDetection: 3
 --- !u!65 &1325464615754170559
 BoxCollider:
@@ -246,3 +249,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutline
   outlineVisual: {fileID: 4825310146308396847}
+--- !u!114 &6452032784661631125
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6893719837444432631}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa18014eecffc9d4bacaed8c3878dc88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BoxImpactPhysics
+  dropGravity: 160
+  floatGravity: 25
+  liftSpeed: 5
+  floatDuration: 0.5
+  impactRadius: 0

@@ -14,8 +14,8 @@ public class PlayerPickup : MonoBehaviour
     public Transform holdPoint;
     public TMP_Text prompt;
     public float pickupDistance = 3f;
-    public float followStrength = 10f;
-    public float maxCarrySpeed = 50f;
+    public float followStrength = 28f;
+    public float maxCarrySpeed = 65f;
 
     private RigidbodyConstraints originalConstraints;
     private bool holdingBox;
@@ -85,7 +85,9 @@ public class PlayerPickup : MonoBehaviour
         Vector3 difference =
             holdPoint.position - box.worldCenterOfMass;
 
-        Vector3 desiredVelocity = difference * followStrength;
+        // Keep the correction within the distance to the hold point in one physics step.
+        float correctionRate = Mathf.Min(followStrength, 1f / Time.fixedDeltaTime);
+        Vector3 desiredVelocity = difference * correctionRate;
 
         box.linearVelocity = Vector3.ClampMagnitude(
             desiredVelocity,
@@ -102,6 +104,8 @@ public class PlayerPickup : MonoBehaviour
         box.isKinematic = false;
         box.detectCollisions = true;
         box.useGravity = false;
+
+        box.GetComponent<BoxImpactPhysics>()?.CancelEffect();
 
         box.linearVelocity = Vector3.zero;
         box.angularVelocity = Vector3.zero;
@@ -122,6 +126,7 @@ public class PlayerPickup : MonoBehaviour
         box.useGravity = true;
         box.constraints = originalConstraints;
         box.linearVelocity = Vector3.zero;
+        box.GetComponent<BoxImpactPhysics>()?.BeginDrop();
         box.angularVelocity = Vector3.zero;
 
         Physics.IgnoreCollision(

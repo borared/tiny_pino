@@ -6233,7 +6233,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!65 &902854688
@@ -7535,7 +7535,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!65 &1077331172
@@ -8722,8 +8722,8 @@ MonoBehaviour:
   holdPoint: {fileID: 489083964}
   prompt: {fileID: 448060701}
   pickupDistance: 10
-  followStrength: 10
-  maxCarrySpeed: 50
+  followStrength: 28
+  maxCarrySpeed: 65
 --- !u!65 &1502506439
 BoxCollider:
   m_ObjectHideFlags: 0

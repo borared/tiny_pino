@@ -41,7 +41,7 @@ public class PlayerController : MonoBehaviour
 
     //rope climb
     [SerializeField] private float ropeClimbSpeed = 12f;
-    [SerializeField] private float ropeSwingAcceleration = 3f;
+    [SerializeField] private float ropeSwingAcceleration = 65f;
     [SerializeField] private float ropeMaxSwingAngle = 30f;
     private RopeMoment heldRopePath;
     private float ropeClimbPosition;
