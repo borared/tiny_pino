@@ -20,6 +20,7 @@ public class PlayerPickup : MonoBehaviour
     private RigidbodyConstraints originalConstraints;
     private bool holdingBox;
     public bool IsHoldingBox => holdingBox;
+    public Rigidbody HeldBox => holdingBox ? box : null;
 
     //box outline
     private InteractionOutline currentOutline;

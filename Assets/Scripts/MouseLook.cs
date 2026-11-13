@@ -14,6 +14,7 @@ public class MouseLook : MonoBehaviour
 
     [Tooltip("Layers the camera should collide with (walls, obstacles, platforms).")]
     public LayerMask collisionLayers = ~0;
+    private PlayerPickup playerPickup;
 
     [Tooltip("Radius of the collision spherecast to keep camera away from wall edges.")]
     public float collisionRadius = 0.3f;
@@ -52,6 +53,8 @@ public class MouseLook : MonoBehaviour
             localDirection = defaultDistance > 0.001f ? defaultCameraLocalPos.normalized : Vector3.back;
             currentDistance = defaultDistance;
         }
+        if (player != null)
+            playerPickup = player.GetComponent<PlayerPickup>();
 
         CachePlayerColliders();
     }
@@ -163,9 +166,15 @@ public class MouseLook : MonoBehaviour
         float closestValidDistance = maxWorldDist;
         bool foundHit = false;
 
+        Rigidbody heldBox = playerPickup != null ? playerPickup.HeldBox : null;
+
         for (int i = 0; i < hits.Length; i++)
         {
             RaycastHit hit = hits[i];
+
+            //remove boxes and stuff with the pickupable tag from camera colliderx
+            if (heldBox != null && hit.collider.attachedRigidbody == heldBox)
+                continue;
 
             // Ignore player character colliders and own children
             if (playerColliders.Contains(hit.collider))
