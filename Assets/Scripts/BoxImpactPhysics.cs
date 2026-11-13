@@ -1,22 +1,117 @@
+using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Rigidbody), typeof(BoxCollider))]
 public class BoxImpactPhysics : MonoBehaviour
 {
     [SerializeField] private float dropGravity = 45f;
-    [SerializeField] private float floatGravity = 4f;
-    [SerializeField] private float liftSpeed = 5f;
-    [SerializeField] private float floatDuration = 2.5f;
-    [SerializeField] private float impactRadius = 12f;
-    private float liftGameTime = -1f;
-    private float liftRealTime;
 
+    private static readonly HashSet<int> BoxColliders = new HashSet<int>();
     private Rigidbody body;
+    private BoxCollider boxCollider;
+    private int colliderId;
     private bool dropping;
     private bool touchedGround;
-    private float floatUntil;
 
-    private void Awake() => body = GetComponent<Rigidbody>();
+    private void Awake()
+    {
+        body = GetComponent<Rigidbody>();
+        boxCollider = GetComponent<BoxCollider>();
+        colliderId = boxCollider.GetInstanceID();
+    }
+
+    private void OnEnable()
+    {
+        lock (BoxColliders)
+        {
+            if (BoxColliders.Count == 0)
+            {
+                Physics.ContactModifyEvent += ModifyContacts;
+                Physics.ContactModifyEventCCD += ModifyCcdContacts;
+            }
+
+            BoxColliders.Add(colliderId);
+        }
+
+        boxCollider.hasModifiableContacts = true;
+    }
+
+    private void OnDisable()
+    {
+        boxCollider.hasModifiableContacts = false;
+
+        lock (BoxColliders)
+        {
+            BoxColliders.Remove(colliderId);
+
+            if (BoxColliders.Count == 0)
+            {
+                Physics.ContactModifyEvent -= ModifyContacts;
+                Physics.ContactModifyEventCCD -= ModifyCcdContacts;
+            }
+        }
+    }
+
+    private static void ModifyContacts(
+        PhysicsScene scene, NativeArray<ModifiableContactPair> pairs)
+    {
+        ApplyBoxContacts(pairs, 1f);
+    }
+
+    private static void ModifyCcdContacts(
+        PhysicsScene scene, NativeArray<ModifiableContactPair> pairs)
+    {
+        // Unity reverses the contact normal in the CCD callback.
+        ApplyBoxContacts(pairs, -1f);
+    }
+
+    private static void ApplyBoxContacts(
+        NativeArray<ModifiableContactPair> pairs, float normalSign)
+    {
+        foreach (var contactPair in pairs)
+        {
+            var pair = contactPair;
+            int firstId = pair.colliderInstanceID;
+            int secondId = pair.otherColliderInstanceID;
+
+            lock (BoxColliders)
+            {
+                if (!BoxColliders.Contains(firstId) || !BoxColliders.Contains(secondId))
+                    continue;
+            }
+
+            if (pair.contactCount == 0)
+                continue;
+
+            Vector3 normal = pair.GetNormal(0) * normalSign;
+            float firstApproach = -Vector3.Dot(pair.bodyVelocity, normal);
+            float secondApproach = Vector3.Dot(pair.otherBodyVelocity, normal);
+
+            bool firstBoxResponds = firstApproach > secondApproach;
+            if (Mathf.Abs(firstApproach - secondApproach) < 0.02f)
+            {
+                // Let the upper box respond on a stack. Break side-on ties by ID.
+                firstBoxResponds = Mathf.Abs(normal.y) > 0.5f
+                    ? normal.y > 0f
+                    : firstId < secondId;
+            }
+
+            var mass = pair.massProperties;
+            if (firstBoxResponds)
+            {
+                mass.otherInverseMassScale = 0f;
+                mass.otherInverseInertiaScale = 0f;
+            }
+            else
+            {
+                mass.inverseMassScale = 0f;
+                mass.inverseInertiaScale = 0f;
+            }
+
+            pair.massProperties = mass;
+        }
+    }
 
     public void BeginDrop()
     {
@@ -28,41 +123,19 @@ public class BoxImpactPhysics : MonoBehaviour
     {
         dropping = false;
         touchedGround = false;
-        floatUntil = 0f;
     }
 
     private void FixedUpdate()
     {
         if (touchedGround)
+            CancelEffect();
+
+        if (body.useGravity && !body.isKinematic &&
+            (dropping || Mathf.Abs(body.linearVelocity.y) > 0.1f))
         {
-            dropping = false;
-            touchedGround = false;
+            body.AddForce(Vector3.down * dropGravity - Physics.gravity,
+                          ForceMode.Acceleration);
         }
-
-        if (liftGameTime >= 0f && body.linearVelocity.y <= 0f)
-        {
-            Debug.Log($"{name} reached the top in " +
-                      $"{Time.fixedTime - liftGameTime:F2}s game time, " +
-                      $"{Time.realtimeSinceStartup - liftRealTime:F2}s real time", this);
-            liftGameTime = -1f;
-        }
-
-        if (!body.useGravity || body.isKinematic)
-            return;
-
-        float verticalSpeed = body.linearVelocity.y;
-
-        if (Time.fixedTime < floatUntil && verticalSpeed > 0f)
-            ApplyGravity(floatGravity);
-        else if (dropping || Mathf.Abs(verticalSpeed) > 0.1f)
-            ApplyGravity(dropGravity);
-    }
-
-    private void ApplyGravity(float strength)
-    {
-        // Add the difference because Unity is already applying scene gravity.
-        body.AddForce(Vector3.down * strength - Physics.gravity,
-                      ForceMode.Acceleration);
     }
 
     private void OnCollisionEnter(Collision hit) => HandleContact(hit);
@@ -73,47 +146,13 @@ public class BoxImpactPhysics : MonoBehaviour
         if (!dropping)
             return;
 
-        if (hit.rigidbody != null &&
-            hit.rigidbody.TryGetComponent(out BoxImpactPhysics struck) &&
-            struck.isActiveAndEnabled)
-        {
-            Lift();
-            struck.Lift();
-
-            Vector3 center = hit.GetContact(0).point;
-            foreach (Collider nearby in Physics.OverlapSphere(
-                         center, impactRadius, Physics.AllLayers,
-                         QueryTriggerInteraction.Ignore))
-            {
-                Rigidbody other = nearby.attachedRigidbody;
-                if (other != null && other.TryGetComponent(out BoxImpactPhysics box))
-                    box.Lift();
-            }
-
-            return;
-        }
-
         for (int i = 0; i < hit.contactCount; i++)
         {
             if (hit.GetContact(i).normal.y > 0.5f)
+            {
                 touchedGround = true;
+                return;
+            }
         }
-    }
-
-    private void Lift()
-    {
-        if (!isActiveAndEnabled || !body.useGravity || body.isKinematic ||
-            Time.fixedTime < floatUntil)
-            return;
-
-        dropping = false;
-        floatUntil = Time.fixedTime + floatDuration;
-
-        Vector3 velocity = body.linearVelocity;
-        velocity.y = liftSpeed;
-        liftGameTime = Time.fixedTime;
-        liftRealTime = Time.realtimeSinceStartup;
-        Debug.Log($"{name} lift: speed {liftSpeed}, gravity {floatGravity}", this);
-        body.WakeUp();
     }
 }
