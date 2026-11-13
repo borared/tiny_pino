@@ -19,6 +19,42 @@ public class PlayerController : MonoBehaviour
     private CharacterController controller;
     private Vector3 walkDirection;
 
+    [Header("Visual Model & Free-Rotate Movement")]
+    [Tooltip("The visual model container (or torso/mesh) that rotates towards WASD movement direction.")]
+    public Transform visualModel;
+    public float rotationSpeed = 12f;
+
+    [Header("Leg Animation (Walking)")]
+    public Transform leftLeg;
+    public Transform rightLeg;
+    public float legSwingAngle = 35f;
+    public float legSwingSpeed = 10f;
+    private Quaternion initialLeftLegRot;
+    private Quaternion initialRightLegRot;
+    private float legCycleTime;
+
+    [Header("Hand Animation (Walking & Jumping)")]
+    public Transform leftHand;
+    public Transform rightHand;
+    public float handSwingAngle = 30f;
+    [Tooltip("Angle to raise hands forward/overhead when jumping.")]
+    public float jumpArmRaiseAngle = 180f;
+    [Tooltip("Outward spread angle for the left and right arms when jumping (V-shape).")]
+    public float jumpArmSpreadAngle = 20f;
+    [Tooltip("Speed arms raise when jumping and lower when landing.")]
+    public float jumpArmSpeed = 12f;
+
+    [Header("Hand Animation (Carry / Pickup Box)")]
+    [Tooltip("Arm pitch forward when carrying a box (in front of chest).")]
+    public float carryArmForwardAngle = 85f;
+    [Tooltip("Arm inward angle towards the box center.")]
+    public float carryArmInwardAngle = 15f;
+    [Tooltip("Transition speed into carry pose.")]
+    public float carryArmSpeed = 10f;
+    public PlayerPickup playerPickup;
+    private Quaternion initialLeftHandRot;
+    private Quaternion initialRightHandRot;
+
     //move with fan control
     public Transform fanSurface;
     public Transform fanRotation;
@@ -49,6 +85,21 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        playerPickup = GetComponent<PlayerPickup>();
+        if (playerPickup == null)
+            playerPickup = GetComponentInParent<PlayerPickup>();
+        if (playerPickup == null)
+            playerPickup = GetComponentInChildren<PlayerPickup>();
+
+        if (leftLeg != null)
+            initialLeftLegRot = leftLeg.localRotation;
+        if (rightLeg != null)
+            initialRightLegRot = rightLeg.localRotation;
+
+        if (leftHand != null)
+            initialLeftHandRot = leftHand.localRotation;
+        if (rightHand != null)
+            initialRightHandRot = rightHand.localRotation;
     }
 
     void Update()
@@ -140,7 +191,113 @@ public class PlayerController : MonoBehaviour
             fanLocalPosition = fanRotation.InverseTransformPoint(transform.position);
         }
 
-        
+        HandleBodyRotationAndLegs(direction);
+    }
+
+    private void HandleBodyRotationAndLegs(Vector3 inputDirection)
+    {
+        bool isMoving = inputDirection.sqrMagnitude > 0.01f && controller.isGrounded && !IsHoldingRope;
+
+        // 1. Rotate visual body towards movement direction (Free camera / non-shiftlock)
+        if (visualModel != null && walkDirection.sqrMagnitude > 0.01f)
+        {
+            Vector3 lookDir = new Vector3(walkDirection.x, 0f, walkDirection.z).normalized;
+            if (lookDir.sqrMagnitude > 0.001f)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(lookDir, Vector3.up);
+                visualModel.rotation = Quaternion.Slerp(visualModel.rotation, targetRot, Time.deltaTime * rotationSpeed);
+            }
+        }
+
+        // 2. Procedural leg & arm animation (Walking, Jumping & Box Carry)
+        bool inAir = !controller.isGrounded && !IsHoldingRope;
+        bool carryingBox = playerPickup != null && playerPickup.IsHoldingBox;
+
+        if (carryingBox)
+        {
+            // Carry animation: Arms hold forward in front of torso hugging/supporting the box
+            float carrySpeed = Time.deltaTime * carryArmSpeed;
+            Quaternion leftCarryRot = Quaternion.Euler(-carryArmForwardAngle, 0f, carryArmInwardAngle);
+            Quaternion rightCarryRot = Quaternion.Euler(-carryArmForwardAngle, 0f, -carryArmInwardAngle);
+
+            if (leftHand != null)
+                leftHand.localRotation = Quaternion.Slerp(leftHand.localRotation, initialLeftHandRot * leftCarryRot, carrySpeed);
+            if (rightHand != null)
+                rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, initialRightHandRot * rightCarryRot, carrySpeed);
+
+            // Legs still walk if player moves while carrying box
+            if (isMoving)
+            {
+                legCycleTime += Time.deltaTime * legSwingSpeed;
+                float swing = Mathf.Sin(legCycleTime);
+                if (leftLeg != null)
+                    leftLeg.localRotation = initialLeftLegRot * Quaternion.Euler(swing * legSwingAngle, 0f, 0f);
+                if (rightLeg != null)
+                    rightLeg.localRotation = initialRightLegRot * Quaternion.Euler(-swing * legSwingAngle, 0f, 0f);
+            }
+            else
+            {
+                legCycleTime = 0f;
+                float returnSpeed = Time.deltaTime * 10f;
+                if (leftLeg != null)
+                    leftLeg.localRotation = Quaternion.Slerp(leftLeg.localRotation, initialLeftLegRot, returnSpeed);
+                if (rightLeg != null)
+                    rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, initialRightLegRot, returnSpeed);
+            }
+        }
+        else if (inAir)
+        {
+            // When jumping / in air, raise both hands up overhead in symmetrical V-shape
+            float armRaiseSpeed = Time.deltaTime * jumpArmSpeed;
+
+            // Pitch up 180 degrees (mirrored axes between left and right)
+            Quaternion leftRaisedRot = Quaternion.Euler(jumpArmRaiseAngle, 0f, -jumpArmSpreadAngle);
+            Quaternion rightRaisedRot = Quaternion.Euler(-jumpArmRaiseAngle, 0f, jumpArmSpreadAngle);
+
+            if (leftHand != null)
+                leftHand.localRotation = Quaternion.Slerp(leftHand.localRotation, initialLeftHandRot * leftRaisedRot, armRaiseSpeed);
+            if (rightHand != null)
+                rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, initialRightHandRot * rightRaisedRot, armRaiseSpeed);
+
+            // Legs gently tuck or return to neutral in mid-air
+            if (leftLeg != null)
+                leftLeg.localRotation = Quaternion.Slerp(leftLeg.localRotation, initialLeftLegRot, armRaiseSpeed);
+            if (rightLeg != null)
+                rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, initialRightLegRot, armRaiseSpeed);
+        }
+        else if (isMoving)
+        {
+            legCycleTime += Time.deltaTime * legSwingSpeed;
+            float swing = Mathf.Sin(legCycleTime);
+
+            // Legs swing alternately
+            if (leftLeg != null)
+                leftLeg.localRotation = initialLeftLegRot * Quaternion.Euler(swing * legSwingAngle, 0f, 0f);
+            if (rightLeg != null)
+                rightLeg.localRotation = initialRightLegRot * Quaternion.Euler(-swing * legSwingAngle, 0f, 0f);
+
+            // Natural human walk: arms swing opposite to legs (mirrored pitch for left arm)
+            if (leftHand != null)
+                leftHand.localRotation = initialLeftHandRot * Quaternion.Euler(swing * handSwingAngle, 0f, 0f);
+            if (rightHand != null)
+                rightHand.localRotation = initialRightHandRot * Quaternion.Euler(swing * handSwingAngle, 0f, 0f);
+        }
+        else
+        {
+            // Smoothly return limbs to resting pose when stopped on ground
+            legCycleTime = 0f;
+            float returnSpeed = Time.deltaTime * 10f;
+
+            if (leftLeg != null)
+                leftLeg.localRotation = Quaternion.Slerp(leftLeg.localRotation, initialLeftLegRot, returnSpeed);
+            if (rightLeg != null)
+                rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, initialRightLegRot, returnSpeed);
+
+            if (leftHand != null)
+                leftHand.localRotation = Quaternion.Slerp(leftHand.localRotation, initialLeftHandRot, returnSpeed);
+            if (rightHand != null)
+                rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, initialRightHandRot, returnSpeed);
+        }
     }
 
     private void LateUpdate()
