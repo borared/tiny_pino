@@ -129,17 +129,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RopeMoment
   startPoint: {fileID: 0}
   endPoint: {fileID: 0}
-  midPoint: {fileID: 0}
-  ropeLength: 6
   ropeRadius: 0.05
   lengthSegments: 20
   radialSegments: 8
   tilingPerMeter: 2
-  stiffness: 250
-  damping: 12
-  midPointWeight: 1
-  midPointPosition: 0.5
-  enableWindEffect: 1
-  windForce: 15
-  windDirectionDegrees: 45
   ropeMaterial: {fileID: 0}

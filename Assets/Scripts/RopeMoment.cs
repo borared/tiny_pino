@@ -22,12 +22,8 @@ public class RopeMoment : MonoBehaviour
     [Tooltip("Bottom end of the rope. Can be another object, handle, or a child Transform.")]
     public Transform endPoint;
 
-    [Tooltip("Optional middle object hanging on the rope (e.g. necklace, bead).")]
-    public Transform midPoint;
 
     [Header("Rope Shape & Detail")]
-    [Tooltip("Length of the rope. If longer than distance between points, it sags naturally.")]
-    public float ropeLength = 6f;
 
     [Range(0.01f, 1f)]
     [Tooltip("Thickness/radius of the 3D rope cylinder.")]
@@ -44,37 +40,8 @@ public class RopeMoment : MonoBehaviour
     [Tooltip("Texture tiling per meter of rope length.")]
     public float tilingPerMeter = 2.0f;
 
-    [Header("Physics & Motion")]
-    [Tooltip("Stiffness of the rope spring reaction.")]
-    public float stiffness = 250f;
-
-    [Tooltip("Damping to settle oscillation.")]
-    public float damping = 12f;
-
-    [Range(1f, 15f)]
-    [Tooltip("Weight curve factor for Rational Bezier.")]
-    public float midPointWeight = 1f;
-
-    [Range(0.2f, 0.8f)]
-    public float midPointPosition = 0.5f;
-
-    [Header("Wind & Sway Effect")]
-    [Tooltip("Enable dynamic breeze/wind sway like in RopeWindEffect.")]
-    public bool enableWindEffect = true;
-    [Range(0f, 150f)]
-    public float windForce = 15f;
-    [Tooltip("Degrees direction of the wind (0 is forward, 90 is right).")]
-    [Range(-360f, 360f)]
-    public float windDirectionDegrees = 45f;
-
     [Header("Material")]
     public Material ropeMaterial;
-
-    // Internal simulation
-    private Vector3 currentValue;
-    private Vector3 currentVelocity;
-    private Vector3 targetValue;
-    private float windSeed;
 
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
@@ -101,18 +68,6 @@ public class RopeMoment : MonoBehaviour
         RecalculateRope();
     }
 
-    void Start()
-    {
-        InitializeComponents();
-        if (IsEndpointsValid)
-        {
-            currentValue = CalculateMidPoint();
-            targetValue = currentValue;
-            currentVelocity = Vector3.zero;
-        }
-        GenerateRopeMesh();
-    }
-
     void InitializeComponents()
     {
         if (meshFilter == null)
@@ -134,99 +89,18 @@ public class RopeMoment : MonoBehaviour
 
     void Update()
     {
-        if (!IsEndpointsValid)
-            return;
-
-        Vector3 currentMid = CalculateMidPoint();
-        targetValue = currentMid;
-
-        if (midPoint != null)
+        if (IsEndpointsValid &&
+            (startPoint.position != prevStartPos || endPoint.position != prevEndPos))
         {
-            midPoint.position = GetRationalBezierPoint(startPoint.position, currentValue, endPoint.position, midPointPosition, 1f, midPointWeight, 1f);
+            RecalculateRope();
         }
-
-        // In editor mode without play, update mesh if anchors moved
-        if (!Application.isPlaying)
-        {
-            if (startPoint.position != prevStartPos || endPoint.position != prevEndPos)
-            {
-                currentValue = targetValue;
-                GenerateRopeMesh();
-                prevStartPos = startPoint.position;
-                prevEndPos = endPoint.position;
-            }
-        }
-        else
-        {
-            GenerateRopeMesh();
-        }
-    }
-
-    void FixedUpdate()
-    {
-        if (!IsEndpointsValid || !Application.isPlaying)
-            return;
-
-        SimulatePhysics();
-    }
-
-    void SimulatePhysics()
-    {
-        float dt = Time.fixedDeltaTime;
-        float dampingFactor = Mathf.Max(0f, 1f - damping * dt);
-        Vector3 acceleration = (targetValue - currentValue) * stiffness * dt;
-        currentVelocity = currentVelocity * dampingFactor + acceleration;
-        currentValue += currentVelocity * dt;
-
-        if (Vector3.Distance(currentValue, targetValue) < 0.005f && currentVelocity.magnitude < 0.005f)
-        {
-            currentValue = targetValue;
-            currentVelocity = Vector3.zero;
-        }
-    }
-
-    public void AddGrabBend(Vector3 handleVelocityChange)
-    {
-        currentVelocity -= handleVelocityChange * 2f;
     }
 
     public Vector3 GetPointAt(float t)
     {
-        if (!IsEndpointsValid)
-            return transform.position;
-
-        Vector3 mid = Application.isPlaying ? currentValue : CalculateMidPoint();
-        return GetRationalBezierPoint(startPoint.position, mid, endPoint.position, t, 1f, midPointWeight, 1f);
-    }
-
-    private Vector3 CalculateMidPoint()
-    {
-        Vector3 p0 = startPoint.position;
-        Vector3 p1 = endPoint.position;
-        Vector3 mid = Vector3.Lerp(p0, p1, midPointPosition);
-
-        float distance = Vector3.Distance(p0, p1);
-        float sagFactor = Mathf.Max(0f, ropeLength - distance);
-
-        float k = Mathf.Lerp(0.493f, 0.323f, Mathf.InverseLerp(1f, 15f, midPointWeight));
-        float w = 1f + k * Mathf.Log(Mathf.Max(1f, midPointWeight));
-        float yFactor = sagFactor / w;
-
-        mid.y -= yFactor;
-        return mid;
-    }
-
-    private Vector3 GetRationalBezierPoint(Vector3 p0, Vector3 p1, Vector3 p2, float t, float w0, float w1, float w2)
-    {
-        Vector3 wp0 = w0 * p0;
-        Vector3 wp1 = w1 * p1;
-        Vector3 wp2 = w2 * p2;
-
-        float denominator = w0 * Mathf.Pow(1 - t, 2) + 2 * w1 * (1 - t) * t + w2 * Mathf.Pow(t, 2);
-        if (Mathf.Abs(denominator) < 0.0001f)
-            return p0;
-
-        return (wp0 * Mathf.Pow(1 - t, 2) + wp1 * 2 * (1 - t) * t + wp2 * Mathf.Pow(t, 2)) / denominator;
+        return IsEndpointsValid
+            ? Vector3.Lerp(startPoint.position, endPoint.position, t)
+            : transform.position;
     }
 
     /// <summary>
@@ -358,14 +232,13 @@ public class RopeMoment : MonoBehaviour
 
     public void RecalculateRope()
     {
-        if (IsEndpointsValid)
-        {
-            currentValue = CalculateMidPoint();
-            targetValue = currentValue;
-            currentVelocity = Vector3.zero;
-            GenerateRopeMesh();
-            OnPointsChanged?.Invoke();
-        }
+        if (!IsEndpointsValid)
+            return;
+
+        prevStartPos = startPoint.position;
+        prevEndPos = endPoint.position;
+        GenerateRopeMesh();
+        OnPointsChanged?.Invoke();
     }
 
     void OnValidate()

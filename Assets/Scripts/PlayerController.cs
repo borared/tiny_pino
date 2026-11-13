@@ -26,25 +26,13 @@ public class PlayerController : MonoBehaviour
     private bool jumpingWithFan;
     private Vector3 fanLocalPosition;
 
-    //rope swing
-    private Rigidbody heldRope;
-    private Collider heldHandle;
-    private Vector3 ropeOffset;
-    private Vector3 releaseHorizontalVelocity;
-    private bool carryingReleaseMomentum;
-    private float grabAgainAt;
-    public bool IsHoldingRope => heldRope != null;
-    public bool CanGrabRope => !IsHoldingRope && releasedHandle == null && Time.time >= grabAgainAt;
-    private Collider releasedHandle;
-    [SerializeField] private float playerRopeMass = 2f;
-    private float unloadedRopeMass;
-
-    //rope climb
     [SerializeField] private float ropeClimbSpeed = 12f;
-    [SerializeField] private float ropeSwingAcceleration = 65f;
-    [SerializeField] private float ropeMaxSwingAngle = 30f;
     private RopeMoment heldRopePath;
     private float ropeClimbPosition;
+    private float grabAgainAt;
+
+    public bool IsHoldingRope => heldRopePath != null;
+    public bool CanGrabRope => !IsHoldingRope && Time.time >= grabAgainAt;
 
     void Awake()
     {
@@ -55,13 +43,6 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 direction = Vector3.zero;
         Keyboard keyboard = Keyboard.current;
-
-        //rope collider
-        if (releasedHandle != null && !controller.bounds.Intersects(releasedHandle.bounds))
-        {
-            Physics.IgnoreCollision(controller, releasedHandle, false);
-            releasedHandle = null;
-        }
 
         //check before rope so there is wasd to rope movement
         if (keyboard != null)
@@ -100,8 +81,8 @@ public class PlayerController : MonoBehaviour
         }
 
         //horizontal movement relative to the player's facing direction.
-        
-        Vector3 movement = carryingReleaseMomentum ? releaseHorizontalVelocity : walkDirection * speed;
+
+        Vector3 movement = walkDirection * speed;
 
         //gravity changes vertical speed over time.
         verticalVelocity += gravity * Time.deltaTime;
@@ -131,7 +112,6 @@ public class PlayerController : MonoBehaviour
         if (controller.isGrounded && verticalVelocity <= 0f)
         {
             jumpingWithFan = false;
-            carryingReleaseMomentum = false;
         }
 
         if (fanRotation != null
@@ -140,126 +120,42 @@ public class PlayerController : MonoBehaviour
             fanLocalPosition = fanRotation.InverseTransformPoint(transform.position);
         }
 
-        
+
     }
 
     private void LateUpdate()
     {
-        if (heldRope == null)
+        if (!IsHoldingRope)
             return;
 
-        Vector3 ropePoint = heldRope.transform.position;
-        float nextPosition = ropeClimbPosition;
-
-        if (heldRopePath != null && heldRopePath.IsEndpointsValid)
+        Keyboard keyboard = Keyboard.current;
+        float climb = 0f;
+        if (keyboard != null)
         {
-            Keyboard keyboard = Keyboard.current;
-            float climbDirection = 0f;
-
-            if (keyboard != null)
-            {
-                if (keyboard.eKey.isPressed)
-                    climbDirection -= 1f;
-
-                if (keyboard.qKey.isPressed)
-                    climbDirection += 1f;
-            }
-
-            float ropeDistance = Mathf.Max(0.01f, Vector3.Distance(
-                heldRopePath.startPoint.position,
-                heldRopePath.endPoint.position
-            ));
-
-            // Leave room for the top of the player's capsule.
-            float highestPosition = Mathf.Clamp01(
-                (controller.bounds.extents.y + 0.5f) / ropeDistance
-            );
-
-            nextPosition = Mathf.Clamp(
-                ropeClimbPosition + climbDirection * ropeClimbSpeed
-                    * Time.deltaTime / ropeDistance,
-                highestPosition,
-                1f
-            );
-
-            ropePoint = heldRopePath.GetPointAt(nextPosition);
+            if (keyboard.eKey.isPressed) climb -= 1f;
+            if (keyboard.qKey.isPressed) climb += 1f;
         }
 
-        Vector3 target = ropePoint + ropeOffset;
+        float length = Vector3.Distance(heldRopePath.startPoint.position,
+                                        heldRopePath.endPoint.position);
+        if (length < 0.01f)
+            return;
+
+        float topLimit = Mathf.Clamp01((controller.bounds.extents.y + 0.5f) / length);
+        float next = Mathf.Clamp(
+            ropeClimbPosition + climb * ropeClimbSpeed * Time.deltaTime / length,
+            topLimit, 1f);
+
+        Vector3 target = heldRopePath.GetPointAt(next)
+            - transform.TransformVector(controller.center);
         controller.Move(target - transform.position);
 
-        // Only advance the climb if the capsule reached its target.
-        if (Vector3.Distance(transform.position, target) < 0.1f)
-            ropeClimbPosition = nextPosition;
-    }
-
-    private void FixedUpdate()
-    {
-        if (heldRope == null) return;
-
-        UpdateRopeMass();
-
-        if (heldRopePath == null ||
-            heldRopePath.startPoint == null || walkDirection == Vector3.zero)
-            return;
-
-
-        Vector3 fromAnchor = heldRope.position - heldRopePath.startPoint.position;
-        float ropeLength = fromAnchor.magnitude;
-        if (ropeLength < 0.01f)
-            return;
-
-        Vector3 swingInput = Vector3.ProjectOnPlane(walkDirection, fromAnchor);
-        if (swingInput.sqrMagnitude < 0.0001f)
-            return;
-
-        Vector3 pushDirection = swingInput.normalized;
-        Vector3 swingVelocity = Vector3.ProjectOnPlane(heldRope.linearVelocity, fromAnchor);
-        float speedInPushDirection = Vector3.Dot(swingVelocity, pushDirection);
-
-        float leverage = Mathf.Clamp01(ropeClimbPosition);
-        float loadScale = unloadedRopeMass / heldRope.mass;
-        float speedChange = ropeSwingAcceleration * leverage * loadScale * swingInput.magnitude * Time.fixedDeltaTime;
-
-        if (speedInPushDirection < 0f)
-        {
-            // Slow the swing before accelerating in the opposite direction.
-            speedChange = Mathf.Min(speedChange, -speedInPushDirection);
-        }
-        else
-        {
-            // Limit how much height the controls can add.
-            float maxRise = ropeLength * (1f - Mathf.Cos(ropeMaxSwingAngle * Mathf.Deg2Rad));
-            float currentRise = ropeLength + fromAnchor.y;
-            float remainingRise = Mathf.Max(0f, maxRise - currentRise);
-            float speedLimit = Mathf.Sqrt(2f * Physics.gravity.magnitude * remainingRise);
-            speedChange = Mathf.Min(speedChange, speedLimit - swingVelocity.magnitude);
-        }
-
-        if (speedChange > 0f)
-            heldRope.AddForce(pushDirection * speedChange, ForceMode.VelocityChange);
+        if ((transform.position - target).sqrMagnitude < 0.01f)
+            ropeClimbPosition = next;
     }
 
     void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        //rope swing
-        if (heldRope != null) return;
-        Rigidbody ropeBody = hit.collider.attachedRigidbody;
-
-
-        if (ropeBody != null && ropeBody.TryGetComponent<RopeSwingEnd>(out _))
-        {
-            if (Vector3.Dot(walkDirection, hit.normal) < -0.01f)
-            {
-                float speedAlongPush = Vector3.Dot(ropeBody.linearVelocity, walkDirection);
-                const float ropePushSpeed = 6f;
-                float speedToAdd = Mathf.Clamp(ropePushSpeed - speedAlongPush, 0f, ropePushSpeed);
-                ropeBody.AddForce(walkDirection * speedToAdd, ForceMode.VelocityChange);
-            }
-
-            return;
-        }
-
         //fan switch
         if (verticalVelocity > 0f && hit.collider.TryGetComponent<FanSwitch>(out var fanSwitch))
         {
@@ -295,61 +191,25 @@ public class PlayerController : MonoBehaviour
         pushPoint.y = box.worldCenterOfMass.y;
         box.AddForceAtPosition(walkDirection * impulse, pushPoint, ForceMode.Impulse);
     }
-
-    private void GrabRope(Collider handle, Vector3 incomingVelocity)
-    {
-        heldHandle = handle;
-        heldRope = handle.attachedRigidbody;
-        heldRopePath = heldRope.GetComponent<RopeSwingEnd>().RopePath;
-        ropeClimbPosition = 1f;
-        unloadedRopeMass = heldRope.mass;
-        UpdateRopeMass();
-        ropeOffset = transform.position - controller.bounds.center;
-
-        Physics.IgnoreCollision(controller, heldHandle, true);
-        jumpingWithFan = false;
-        touchedFanBelow = false;
-
-        ConfigurableJoint joint = heldRope.GetComponent<ConfigurableJoint>();
-        Vector3 radial = heldRope.position - joint.connectedAnchor;
-        Vector3 relativeVelocity = incomingVelocity - heldRope.linearVelocity;
-        Vector3 tangent = Vector3.ProjectOnPlane(relativeVelocity, radial);
-
-        float playerMassShare = playerRopeMass / heldRope.mass;
-        Vector3 grabKick = Vector3.ClampMagnitude(tangent * playerMassShare, 6f);
-        heldRope.AddForce(grabKick, ForceMode.VelocityChange);
-
-        if (heldRopePath != null)
-            heldRopePath.AddGrabBend(grabKick);
-    }
-
-    private void ReleaseRope(Vector3 velocity)
-    {
-
-        releasedHandle = heldHandle;
-        heldRope.mass = unloadedRopeMass;
-
-        heldRope = null;
-        heldHandle = null;
-        grabAgainAt = Time.time + 0.3f;
-        carryingReleaseMomentum = true;
-        verticalVelocity = velocity.y;
-        releaseHorizontalVelocity = Vector3.ProjectOnPlane(velocity, Vector3.up);
-    }
     public void InteractWithRope(Collider handle)
     {
         if (IsHoldingRope)
-            ReleaseRope(heldRope.linearVelocity);
-        else if (CanGrabRope && handle != null)
-            GrabRope(handle, controller.velocity);
-    }
+        {
+            heldRopePath = null;
+            grabAgainAt = Time.time + 0.3f;
+            verticalVelocity = 0f;
+            return;
+        }
 
-    private void UpdateRopeMass()
-    {
-        float position = Mathf.Clamp01(ropeClimbPosition);
-        float loadedMass = unloadedRopeMass + playerRopeMass * position * position;
+        if (!CanGrabRope || handle == null ||
+            !handle.TryGetComponent(out RopeSwingEnd rope) ||
+            rope.RopePath == null || !rope.RopePath.IsEndpointsValid)
+            return;
 
-        if (!Mathf.Approximately(heldRope.mass, loadedMass))
-            heldRope.mass = loadedMass;
+        heldRopePath = rope.RopePath;
+        ropeClimbPosition = 1f;
+        verticalVelocity = 0f;
+        jumpingWithFan = false;
+        touchedFanBelow = false;
     }
 }

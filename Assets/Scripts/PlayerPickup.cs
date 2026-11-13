@@ -219,16 +219,10 @@ public class PlayerPickup : MonoBehaviour
 
         foreach (Collider candidate in Physics.OverlapSphere(
             transform.position, ropeGrabDistance, Physics.AllLayers,
-            QueryTriggerInteraction.Ignore))
+            QueryTriggerInteraction.Collide))
         {
-            Rigidbody body = candidate.attachedRigidbody;
-            if (body == null || body.isKinematic ||
-                !body.TryGetComponent<RopeSwingEnd>(out var rope) ||
-                !rope.isActiveAndEnabled ||
-                !body.TryGetComponent<ConfigurableJoint>(out _))
-            {
+            if (!candidate.TryGetComponent(out RopeSwingEnd rope) || !rope.isActiveAndEnabled || rope.RopePath == null || !rope.RopePath.IsEndpointsValid)
                 continue;
-            }
 
             float distance = (candidate.ClosestPoint(transform.position)
                               - transform.position).sqrMagnitude;
