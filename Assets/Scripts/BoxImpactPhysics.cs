@@ -12,7 +12,7 @@ public class BoxImpactPhysics : MonoBehaviour
     private BoxCollider boxCollider;
     private int colliderId;
     private bool dropping;
-    private bool touchedGround;
+    private bool supported;
 
     private void Awake()
     {
@@ -88,14 +88,12 @@ public class BoxImpactPhysics : MonoBehaviour
             float firstApproach = -Vector3.Dot(pair.bodyVelocity, normal);
             float secondApproach = Vector3.Dot(pair.otherBodyVelocity, normal);
 
-            bool firstBoxResponds = firstApproach > secondApproach;
-            if (Mathf.Abs(firstApproach - secondApproach) < 0.02f)
-            {
-                // Let the upper box respond on a stack. Break side-on ties by ID.
-                firstBoxResponds = Mathf.Abs(normal.y) > 0.5f
-                    ? normal.y > 0f
-                    : firstId < secondId;
-            }
+            // The upper box absorbs vertical impacts even when the stack bounces.
+            bool firstBoxResponds = normal.y > 0f;
+            if (Mathf.Abs(normal.y) <= 0.5f)
+                firstBoxResponds = Mathf.Abs(firstApproach - secondApproach) < 0.02f
+                    ? firstId < secondId
+                    : firstApproach > secondApproach;
 
             var mass = pair.massProperties;
             if (firstBoxResponds)
@@ -122,20 +120,24 @@ public class BoxImpactPhysics : MonoBehaviour
     public void CancelEffect()
     {
         dropping = false;
-        touchedGround = false;
+        supported = false;
     }
 
     private void FixedUpdate()
     {
-        if (touchedGround)
-            CancelEffect();
-
-        if (body.useGravity && !body.isKinematic &&
-            (dropping || Mathf.Abs(body.linearVelocity.y) > 0.1f))
+        if (supported)
+        {
+            dropping = false;
+        }
+        else if (body.useGravity && !body.isKinematic &&
+                 (dropping || body.linearVelocity.y < -0.1f))
         {
             body.AddForce(Vector3.down * dropGravity - Physics.gravity,
                           ForceMode.Acceleration);
         }
+
+        // Enter/Stay renew support after the next physics simulation.
+        supported = false;
     }
 
     private void OnCollisionEnter(Collision hit) => HandleContact(hit);
@@ -143,14 +145,11 @@ public class BoxImpactPhysics : MonoBehaviour
 
     private void HandleContact(Collision hit)
     {
-        if (!dropping)
-            return;
-
         for (int i = 0; i < hit.contactCount; i++)
         {
             if (hit.GetContact(i).normal.y > 0.5f)
             {
-                touchedGround = true;
+                supported = true;
                 return;
             }
         }

@@ -264,7 +264,7 @@ public class PlayerPickup : MonoBehaviour
 
         SetOutline(null);
         prompt.gameObject.SetActive(true);
-        prompt.text = holdingRope ? "Press F to release rope" : "Press F to grab rope";
+        prompt.text = holdingRope ? "E to climb up, Q to climb down, F to release" : "Press F to grab rope";
 
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null && keyboard.fKey.wasPressedThisFrame)

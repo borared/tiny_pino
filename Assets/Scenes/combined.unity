@@ -3476,7 +3476,7 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_Radius: 0.5
   m_Height: 2
@@ -3631,17 +3631,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7850832178901825057, guid: 311a7e530e3f3a342be1da50839be1ff, type: 3}
   m_PrefabInstance: {fileID: 531563014}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &559649883 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 73220304222142037, guid: 31bc0c49664ec894589a614209317efc, type: 3}
-  m_PrefabInstance: {fileID: 1426238236}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9c1864bb28d5d75418e6cf578830aa43, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RopeMoment
 --- !u!1 &570212980 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5528078466911944822, guid: e3741e7d663eedb4ea8dac9404e1ea64, type: 3}
@@ -5864,10 +5853,7 @@ PrefabInstance:
     m_RemovedGameObjects:
     - {fileID: 676240748035251134, guid: 31bc0c49664ec894589a614209317efc, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3229134917444193339, guid: 31bc0c49664ec894589a614209317efc, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 934566124}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 31bc0c49664ec894589a614209317efc, type: 3}
 --- !u!1001 &670883599
 PrefabInstance:
@@ -6527,7 +6513,7 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_Radius: 0.5
   m_Height: 2
@@ -6978,7 +6964,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
@@ -7153,7 +7139,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 0
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!65 &902854688
 BoxCollider:
@@ -7553,24 +7539,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 2588a84f669ec824483ad6ca3053361d, type: 3}
   m_PrefabInstance: {fileID: 966312137}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &934566119 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3229134917444193339, guid: 31bc0c49664ec894589a614209317efc, type: 3}
-  m_PrefabInstance: {fileID: 660845202}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &934566124
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 934566119}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 14521bd0d25d6e54f92c98eb64c2ea45, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RopeSwingEnd
-  ropePath: {fileID: 2105668434}
 --- !u!1001 &937058766
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8484,7 +8452,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 0
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!65 &1077331172
 BoxCollider:
@@ -9376,24 +9344,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -1575516471588260835, guid: 0ad0a7dc8b4f2274393fc837777cbe07, type: 3}
---- !u!1 &1255765104 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3229134917444193339, guid: 31bc0c49664ec894589a614209317efc, type: 3}
-  m_PrefabInstance: {fileID: 1426238236}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1255765106
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1255765104}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 14521bd0d25d6e54f92c98eb64c2ea45, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RopeSwingEnd
-  ropePath: {fileID: 559649883}
 --- !u!1 &1262968729
 GameObject:
   m_ObjectHideFlags: 0
@@ -10172,10 +10122,7 @@ PrefabInstance:
     m_RemovedGameObjects:
     - {fileID: 676240748035251134, guid: 31bc0c49664ec894589a614209317efc, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3229134917444193339, guid: 31bc0c49664ec894589a614209317efc, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1255765106}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 31bc0c49664ec894589a614209317efc, type: 3}
 --- !u!4 &1426592072 stripped
 Transform:
@@ -11923,7 +11870,7 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_Radius: 0.5
   m_Height: 2
@@ -12025,7 +11972,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 1.0000002, y: 2.0000005, z: 1.0000001}
   m_Center: {x: 0, y: -0.0000038146973, z: 0}
@@ -13096,7 +13043,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
@@ -13389,7 +13336,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
@@ -14074,17 +14021,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 23.447, y: 180, z: 0}
---- !u!114 &2105668434 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 73220304222142037, guid: 31bc0c49664ec894589a614209317efc, type: 3}
-  m_PrefabInstance: {fileID: 660845202}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9c1864bb28d5d75418e6cf578830aa43, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RopeMoment
 --- !u!64 &2112020565
 MeshCollider:
   m_ObjectHideFlags: 0

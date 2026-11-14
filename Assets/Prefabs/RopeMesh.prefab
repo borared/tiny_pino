@@ -46,6 +46,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: RopeEnd
       objectReference: {fileID: 0}
+    - target: {fileID: 7809391487593109739, guid: 6cb055bef0c2c314484ca79dc90e5fd2, type: 3}
+      propertyPath: m_IsTrigger
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4417917808990408953, guid: 6cb055bef0c2c314484ca79dc90e5fd2, type: 3}
       propertyPath: m_LocalPosition.x
       value: -567.46
@@ -89,8 +93,29 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 305771580011265062, guid: 6cb055bef0c2c314484ca79dc90e5fd2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5292279504781172301}
   m_SourcePrefab: {fileID: 100100000, guid: 6cb055bef0c2c314484ca79dc90e5fd2, type: 3}
+--- !u!1 &3229134917444193339 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 305771580011265062, guid: 6cb055bef0c2c314484ca79dc90e5fd2, type: 3}
+  m_PrefabInstance: {fileID: 2949401151762165789}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5292279504781172301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3229134917444193339}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14521bd0d25d6e54f92c98eb64c2ea45, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::RopeSwingEnd
+  ropePath: {fileID: 73220304222142037}
 --- !u!4 &1558800104311726308 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4417917808990408953, guid: 6cb055bef0c2c314484ca79dc90e5fd2, type: 3}
@@ -166,6 +191,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2694645242964344959}
     m_Modifications:
+    - target: {fileID: 4042503878580403822, guid: 48ba54343950cc246870dc65c2a3191b, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 596766149859783387, guid: 48ba54343950cc246870dc65c2a3191b, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -231,6 +260,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 48ba54343950cc246870dc65c2a3191b, type: 3}
+--- !u!114 &73220304222142037 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8809640668277271129, guid: 48ba54343950cc246870dc65c2a3191b, type: 3}
+  m_PrefabInstance: {fileID: 8882788387300430860}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c1864bb28d5d75418e6cf578830aa43, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::RopeMoment
 --- !u!4 &6139058129003949805 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3347388582393346785, guid: 48ba54343950cc246870dc65c2a3191b, type: 3}

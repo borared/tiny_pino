@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -18,6 +18,10 @@ public class PlayerController : MonoBehaviour
     //also player control
     private CharacterController controller;
     private Vector3 walkDirection;
+    private readonly HashSet<Rigidbody> boxPushCandidates = new();
+    private readonly HashSet<Rigidbody> boxSupports = new();
+    private bool collectingBoxContacts;
+    private float feetBeforeMove;
 
     [Header("Visual Model & Free-Rotate Movement")]
     [Tooltip("The visual model container (or torso/mesh) that rotates towards WASD movement direction.")]
@@ -64,7 +68,6 @@ public class PlayerController : MonoBehaviour
 
     [SerializeField] private float ropeClimbSpeed = 12f;
     private RopeMoment heldRopePath;
-    private float ropeClimbPosition;
     private float grabAgainAt;
 
     public bool IsHoldingRope => heldRopePath != null;
@@ -73,6 +76,8 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        // Move still hits boxes, but the physics solver cannot shove them out of the capsule.
+        controller.detectCollisions = false;
         playerPickup = GetComponent<PlayerPickup>();
         if (playerPickup == null)
             playerPickup = GetComponentInParent<PlayerPickup>();
@@ -152,8 +157,8 @@ public class PlayerController : MonoBehaviour
 
         touchedFanBelow = false;
 
-        CollisionFlags collisions =
-            controller.Move(movement * Time.deltaTime + fanMovement);
+        // Let Move finish before deciding whether a contact was a push or a landing.
+        CollisionFlags collisions = MovePlayer(movement * Time.deltaTime + fanMovement);
 
         if ((collisions & CollisionFlags.Above) != 0 && verticalVelocity > 0f)
         {
@@ -172,6 +177,27 @@ public class PlayerController : MonoBehaviour
         }
 
         HandleBodyRotationAndLegs(direction);
+    }
+
+    private CollisionFlags MovePlayer(Vector3 displacement)
+    {
+        boxPushCandidates.Clear();
+        boxSupports.Clear();
+        feetBeforeMove = controller.bounds.min.y;
+        collectingBoxContacts = controller.isGrounded && verticalVelocity <= 0f;
+        CollisionFlags collisions = controller.Move(displacement);
+        collectingBoxContacts = false;
+
+        if ((collisions & CollisionFlags.Below) != 0)
+        {
+            foreach (Rigidbody box in boxPushCandidates)
+            {
+                if (!boxSupports.Contains(box))
+                    PushBox(box);
+            }
+        }
+
+        return collisions;
     }
 
     private void HandleBodyRotationAndLegs(Vector3 inputDirection)
@@ -293,22 +319,24 @@ public class PlayerController : MonoBehaviour
             if (keyboard.qKey.isPressed) climb += 1f;
         }
 
-        float length = Vector3.Distance(heldRopePath.startPoint.position,
-                                        heldRopePath.endPoint.position);
+        MoveAlongRope(climb * ropeClimbSpeed * Time.deltaTime);
+    }
+
+    private void MoveAlongRope(float distance)
+    {
+        Vector3 start = heldRopePath.startPoint.position;
+        Vector3 rope = heldRopePath.endPoint.position - start;
+        float length = rope.magnitude;
         if (length < 0.01f)
             return;
 
+        Vector3 playerCenter = transform.TransformPoint(controller.center);
+        // Collisions can stop the capsule short of the target while attaching or climbing.
+        float positionOnRope = Vector3.Dot(playerCenter - start, rope) / rope.sqrMagnitude;
         float topLimit = Mathf.Clamp01((controller.bounds.extents.y + 0.5f) / length);
-        float next = Mathf.Clamp(
-            ropeClimbPosition + climb * ropeClimbSpeed * Time.deltaTime / length,
-            topLimit, 1f);
-
-        Vector3 target = heldRopePath.GetPointAt(next)
-            - transform.TransformVector(controller.center);
-        controller.Move(target - transform.position);
-
-        if ((transform.position - target).sqrMagnitude < 0.01f)
-            ropeClimbPosition = next;
+        positionOnRope = Mathf.Clamp(positionOnRope, topLimit, 1f);
+        float next = Mathf.Clamp(positionOnRope + distance / length, topLimit, 1f);
+        controller.Move(heldRopePath.GetPointAt(next) - playerCenter);
     }
 
     void OnControllerColliderHit(ControllerColliderHit hit)
@@ -325,19 +353,28 @@ public class PlayerController : MonoBehaviour
             touchedFanBelow = true;
         }
         //box
+        if (!collectingBoxContacts)
+            return;
+
         Rigidbody box = hit.collider.attachedRigidbody;
 
         if (box == null || box.isKinematic || !box.CompareTag("Pickupable"))
             return;
 
-        // A downward sweep can hit the edge with a side-facing normal.
-        if (hit.moveDirection.y < -0.3f || hit.normal.y > 0.5f)
+        float skinHeight = controller.skinWidth * Mathf.Abs(controller.transform.lossyScale.y);
+        // Unity can report both a side hit and a support hit during one Move.
+        if (hit.normal.y > 0.5f || feetBeforeMove >= hit.collider.bounds.max.y - skinHeight)
+        {
+            boxSupports.Add(box);
             return;
+        }
 
-        // Use the intended walking direction, even if the box stopped the controller.
-        if (Vector3.Dot(walkDirection, hit.normal) >= -0.01f)
-            return;
+        if (hit.moveDirection.y >= -0.3f && Vector3.Dot(walkDirection, hit.normal) < -0.01f)
+            boxPushCandidates.Add(box);
+    }
 
+    private void PushBox(Rigidbody box)
+    {
         float remainingSpeed =
             maxPushSpeed - Vector3.Dot(box.linearVelocity, walkDirection);
         if (remainingSpeed <= 0f)
@@ -362,7 +399,6 @@ public class PlayerController : MonoBehaviour
             return;
 
         heldRopePath = rope.RopePath;
-        ropeClimbPosition = 1f;
         verticalVelocity = 0f;
         jumpingWithFan = false;
         touchedFanBelow = false;
