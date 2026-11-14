@@ -41,12 +41,16 @@ public class PlayerController : MonoBehaviour
     public Transform leftHand;
     public Transform rightHand;
     public float handSwingAngle = 30f;
-    [Tooltip("Angle to raise hands forward/overhead when jumping.")]
+    [Tooltip("How far the arms pitch forward from their resting pose in the air.")]
     public float jumpArmRaiseAngle = 180f;
-    [Tooltip("Outward spread angle for the left and right arms when jumping (V-shape).")]
-    public float jumpArmSpreadAngle = 20f;
-    [Tooltip("Speed arms raise when jumping and lower when landing.")]
-    public float jumpArmSpeed = 12f;
+    [Tooltip("Outward spread angle for the arms in the air.")]
+    public float jumpArmSpreadAngle = 0f;
+    [Tooltip("How quickly the arms rise in the air.")]
+    public float jumpArmSpeed = 26f;
+    private bool jumpedFromGround;
+    private float jumpArmRaiseProgress;
+    private Quaternion jumpStartLeftHandRot;
+    private Quaternion jumpStartRightHandRot;
 
     [Header("Hand Animation (Carry / Pickup Box)")]
     [Tooltip("Arm pitch forward when carrying a box (in front of chest).")]
@@ -58,6 +62,9 @@ public class PlayerController : MonoBehaviour
     public PlayerPickup playerPickup;
     private Quaternion initialLeftHandRot;
     private Quaternion initialRightHandRot;
+    private bool leftHandFollowsShoulder;
+    private Vector3 leftHandAnchor;
+    private Quaternion leftHandPose;
 
     //move with fan control
     public Transform fanSurface;
@@ -66,9 +73,12 @@ public class PlayerController : MonoBehaviour
     private bool jumpingWithFan;
     private Vector3 fanLocalPosition;
 
+    [Header("Rope Climbing")]
     [SerializeField] private float ropeClimbSpeed = 12f;
+    [SerializeField, Min(0.01f)] private float ropeClimbCycleDistance = 8f;
     private RopeMoment heldRopePath;
     private float grabAgainAt;
+    private float ropeClimbPhase;
 
     public bool IsHoldingRope => heldRopePath != null;
     public bool CanGrabRope => !IsHoldingRope && Time.time >= grabAgainAt;
@@ -90,7 +100,19 @@ public class PlayerController : MonoBehaviour
             initialRightLegRot = rightLeg.localRotation;
 
         if (leftHand != null)
-            initialLeftHandRot = leftHand.localRotation;
+        {
+            leftHandFollowsShoulder = !leftHand.IsChildOf(transform);
+            if (leftHandFollowsShoulder)
+            {
+                leftHandAnchor = transform.InverseTransformPoint(leftHand.position);
+                initialLeftHandRot = Quaternion.Inverse(transform.rotation) * leftHand.rotation;
+            }
+            else
+            {
+                initialLeftHandRot = leftHand.localRotation;
+            }
+            leftHandPose = initialLeftHandRot;
+        }
         if (rightHand != null)
             initialRightHandRot = rightHand.localRotation;
     }
@@ -132,6 +154,7 @@ public class PlayerController : MonoBehaviour
             if (keyboard.spaceKey.wasPressedThisFrame && controller.isGrounded)
             {
                 verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                jumpedFromGround = true;
                 jumpingWithFan = fanRotation != null && touchedFanBelow;
             }
         }
@@ -167,6 +190,7 @@ public class PlayerController : MonoBehaviour
 
         if (controller.isGrounded && verticalVelocity <= 0f)
         {
+            jumpedFromGround = false;
             jumpingWithFan = false;
         }
 
@@ -216,20 +240,24 @@ public class PlayerController : MonoBehaviour
         }
 
         // 2. Procedural leg & arm animation (Walking, Jumping & Box Carry)
-        bool inAir = !controller.isGrounded && !IsHoldingRope;
+        bool animateJump = jumpedFromGround && !controller.isGrounded;
         bool carryingBox = playerPickup != null && playerPickup.IsHoldingBox;
+
+        if (!animateJump || carryingBox)
+            jumpArmRaiseProgress = 0f;
 
         if (carryingBox)
         {
-            // Carry animation: Arms hold forward in front of torso hugging/supporting the box
             float carrySpeed = Time.deltaTime * carryArmSpeed;
-            Quaternion leftCarryRot = Quaternion.Euler(-carryArmForwardAngle, 0f, carryArmInwardAngle);
-            Quaternion rightCarryRot = Quaternion.Euler(-carryArmForwardAngle, 0f, -carryArmInwardAngle);
+            Quaternion forwardReach = Quaternion.AngleAxis(-carryArmForwardAngle, Vector3.right);
+            // Lift both arms in the player's forward direction, then turn them toward the box center.
+            Quaternion leftCarryPose = Quaternion.AngleAxis(carryArmInwardAngle, Vector3.up) * forwardReach * initialLeftHandRot;
+            Quaternion rightCarryPose = Quaternion.AngleAxis(-carryArmInwardAngle, Vector3.up) * forwardReach * initialRightHandRot;
 
             if (leftHand != null)
-                leftHand.localRotation = Quaternion.Slerp(leftHand.localRotation, initialLeftHandRot * leftCarryRot, carrySpeed);
+                SetLeftHandPose(Quaternion.Slerp(leftHandPose, leftCarryPose, carrySpeed));
             if (rightHand != null)
-                rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, initialRightHandRot * rightCarryRot, carrySpeed);
+                rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, rightCarryPose, carrySpeed);
 
             // Legs still walk if player moves while carrying box
             if (isMoving)
@@ -251,25 +279,38 @@ public class PlayerController : MonoBehaviour
                     rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, initialRightLegRot, returnSpeed);
             }
         }
-        else if (inAir)
+        else if (animateJump)
         {
-            // When jumping / in air, raise both hands up overhead in symmetrical V-shape
-            float armRaiseSpeed = Time.deltaTime * jumpArmSpeed;
+            if (jumpArmRaiseProgress == 0f)
+            {
+                if (leftHand != null)
+                    jumpStartLeftHandRot = leftHandPose;
+                if (rightHand != null)
+                    jumpStartRightHandRot = rightHand.localRotation;
+            }
 
-            // Pitch up 180 degrees (mirrored axes between left and right)
-            Quaternion leftRaisedRot = Quaternion.Euler(jumpArmRaiseAngle, 0f, -jumpArmSpreadAngle);
-            Quaternion rightRaisedRot = Quaternion.Euler(-jumpArmRaiseAngle, 0f, jumpArmSpreadAngle);
+            float armRaiseBlend = 1f - Mathf.Exp(-jumpArmSpeed * Time.deltaTime);
+            jumpArmRaiseProgress = Mathf.Lerp(jumpArmRaiseProgress, 1f, armRaiseBlend);
+            // Apply the pitch separately so the 180-degree rotation always sweeps forward.
+            Quaternion pitch = Quaternion.AngleAxis(-jumpArmRaiseAngle * jumpArmRaiseProgress, Vector3.right);
 
             if (leftHand != null)
-                leftHand.localRotation = Quaternion.Slerp(leftHand.localRotation, initialLeftHandRot * leftRaisedRot, armRaiseSpeed);
+            {
+                Quaternion spreadPose = initialLeftHandRot * Quaternion.AngleAxis(-jumpArmSpreadAngle, Vector3.forward);
+                SetLeftHandPose(pitch * Quaternion.Slerp(jumpStartLeftHandRot, spreadPose, jumpArmRaiseProgress));
+            }
             if (rightHand != null)
-                rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, initialRightHandRot * rightRaisedRot, armRaiseSpeed);
+            {
+                Quaternion spreadPose = initialRightHandRot * Quaternion.AngleAxis(jumpArmSpreadAngle, Vector3.forward);
+                rightHand.localRotation = pitch * Quaternion.Slerp(jumpStartRightHandRot, spreadPose, jumpArmRaiseProgress);
+            }
 
             // Legs gently tuck or return to neutral in mid-air
+            float legReturnBlend = Time.deltaTime * 12f;
             if (leftLeg != null)
-                leftLeg.localRotation = Quaternion.Slerp(leftLeg.localRotation, initialLeftLegRot, armRaiseSpeed);
+                leftLeg.localRotation = Quaternion.Slerp(leftLeg.localRotation, initialLeftLegRot, legReturnBlend);
             if (rightLeg != null)
-                rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, initialRightLegRot, armRaiseSpeed);
+                rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, initialRightLegRot, legReturnBlend);
         }
         else if (isMoving)
         {
@@ -282,15 +323,16 @@ public class PlayerController : MonoBehaviour
             if (rightLeg != null)
                 rightLeg.localRotation = initialRightLegRot * Quaternion.Euler(-swing * legSwingAngle, 0f, 0f);
 
-            // Natural human walk: arms swing opposite to legs (mirrored pitch for left arm)
+            // Each arm swings opposite the leg on the same side.
+            float armSwing = swing * handSwingAngle;
             if (leftHand != null)
-                leftHand.localRotation = initialLeftHandRot * Quaternion.Euler(swing * handSwingAngle, 0f, 0f);
+                SetLeftHandPose(initialLeftHandRot * Quaternion.Euler(-armSwing, 0f, 0f));
             if (rightHand != null)
-                rightHand.localRotation = initialRightHandRot * Quaternion.Euler(swing * handSwingAngle, 0f, 0f);
+                rightHand.localRotation = initialRightHandRot * Quaternion.Euler(armSwing, 0f, 0f);
         }
         else
         {
-            // Smoothly return limbs to resting pose when stopped on ground
+            // Relax the limbs while idle or stepping off a ledge.
             legCycleTime = 0f;
             float returnSpeed = Time.deltaTime * 10f;
 
@@ -300,35 +342,50 @@ public class PlayerController : MonoBehaviour
                 rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, initialRightLegRot, returnSpeed);
 
             if (leftHand != null)
-                leftHand.localRotation = Quaternion.Slerp(leftHand.localRotation, initialLeftHandRot, returnSpeed);
+                SetLeftHandPose(Quaternion.Slerp(leftHandPose, initialLeftHandRot, returnSpeed));
             if (rightHand != null)
                 rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, initialRightHandRot, returnSpeed);
         }
     }
 
-    private void LateUpdate()
+    private void SetLeftHandPose(Quaternion pose)
     {
-        if (!IsHoldingRope)
-            return;
-
-        Keyboard keyboard = Keyboard.current;
-        float climb = 0f;
-        if (keyboard != null)
-        {
-            if (keyboard.eKey.isPressed) climb -= 1f;
-            if (keyboard.qKey.isPressed) climb += 1f;
-        }
-
-        MoveAlongRope(climb * ropeClimbSpeed * Time.deltaTime);
+        leftHandPose = pose;
+        if (!leftHandFollowsShoulder)
+            leftHand.localRotation = pose;
     }
 
-    private void MoveAlongRope(float distance)
+    private void LateUpdate()
     {
+        if (IsHoldingRope)
+        {
+            Keyboard keyboard = Keyboard.current;
+            float climb = 0f;
+            if (keyboard != null)
+            {
+                if (keyboard.eKey.isPressed) climb -= 1f;
+                if (keyboard.qKey.isPressed) climb += 1f;
+            }
+
+            float distanceClimbed = MoveAlongRope(climb * ropeClimbSpeed * Time.deltaTime);
+            AnimateRopeClimb(distanceClimbed);
+        }
+
+        // Keep the pivot on the shoulder without inheriting the player's uneven scale.
+        if (leftHandFollowsShoulder && leftHand != null)
+            leftHand.SetPositionAndRotation(transform.TransformPoint(leftHandAnchor), transform.rotation * leftHandPose);
+    }
+
+    private float MoveAlongRope(float distance)
+    {
+        if (!heldRopePath.IsEndpointsValid)
+            return 0f;
+
         Vector3 start = heldRopePath.startPoint.position;
         Vector3 rope = heldRopePath.endPoint.position - start;
         float length = rope.magnitude;
         if (length < 0.01f)
-            return;
+            return 0f;
 
         Vector3 playerCenter = transform.TransformPoint(controller.center);
         // Collisions can stop the capsule short of the target while attaching or climbing.
@@ -337,6 +394,38 @@ public class PlayerController : MonoBehaviour
         positionOnRope = Mathf.Clamp(positionOnRope, topLimit, 1f);
         float next = Mathf.Clamp(positionOnRope + distance / length, topLimit, 1f);
         controller.Move(heldRopePath.GetPointAt(next) - playerCenter);
+
+        // Count movement along the rope, excluding the snap into place when grabbing it.
+        Vector3 actualMovement = transform.TransformPoint(controller.center) - playerCenter;
+        float travel = Vector3.Dot(actualMovement, rope / length);
+        float requestedTravel = (next - positionOnRope) * length;
+        return Mathf.Clamp(travel, Mathf.Min(0f, requestedTravel), Mathf.Max(0f, requestedTravel));
+    }
+
+    private void AnimateRopeClimb(float distanceClimbed)
+    {
+        ropeClimbPhase = Mathf.Repeat(ropeClimbPhase - distanceClimbed / ropeClimbCycleDistance, 1f);
+        float reach = Mathf.Sin(ropeClimbPhase * 2f * Mathf.PI);
+        float blend = 1f - Mathf.Exp(-20f * Time.deltaTime);
+
+        // The wrists stay raised and turned toward the rope throughout the cycle.
+        Quaternion leftGrip = Quaternion.Euler(-130f - 16f * reach, 0f, 34f) * initialLeftHandRot;
+        Quaternion rightGrip = Quaternion.Euler(-130f + 16f * reach, 0f, -34f) * initialRightHandRot;
+        if (leftHand != null)
+            SetLeftHandPose(Quaternion.Slerp(leftHandPose, leftGrip, blend));
+        if (rightHand != null)
+            rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, rightGrip, blend);
+
+        if (leftLeg != null)
+        {
+            Quaternion leftBrace = initialLeftLegRot * Quaternion.Euler(-28f + 16f * reach, 0f, 12f);
+            leftLeg.localRotation = Quaternion.Slerp(leftLeg.localRotation, leftBrace, blend);
+        }
+        if (rightLeg != null)
+        {
+            Quaternion rightBrace = initialRightLegRot * Quaternion.Euler(-28f - 16f * reach, 0f, -12f);
+            rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, rightBrace, blend);
+        }
     }
 
     void OnControllerColliderHit(ControllerColliderHit hit)
@@ -399,7 +488,10 @@ public class PlayerController : MonoBehaviour
             return;
 
         heldRopePath = rope.RopePath;
+        ropeClimbPhase = 0.25f;
         verticalVelocity = 0f;
+        jumpedFromGround = false;
+        jumpArmRaiseProgress = 0f;
         jumpingWithFan = false;
         touchedFanBelow = false;
     }
