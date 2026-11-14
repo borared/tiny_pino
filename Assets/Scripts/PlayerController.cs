@@ -330,8 +330,8 @@ public class PlayerController : MonoBehaviour
         if (box == null || box.isKinematic || !box.CompareTag("Pickupable"))
             return;
 
-        // Skip the top of the box so landing on it doesn't push it.
-        if (hit.normal.y > 0.5f)
+        // A downward sweep can hit the edge with a side-facing normal.
+        if (hit.moveDirection.y < -0.3f || hit.normal.y > 0.5f)
             return;
 
         // Use the intended walking direction, even if the box stopped the controller.
@@ -344,9 +344,7 @@ public class PlayerController : MonoBehaviour
             return;
 
         float impulse = Mathf.Min(pushForce * Time.deltaTime, remainingSpeed * box.mass);
-        Vector3 pushPoint = hit.point;
-        pushPoint.y = box.worldCenterOfMass.y;
-        box.AddForceAtPosition(walkDirection * impulse, pushPoint, ForceMode.Impulse);
+        box.AddForce(walkDirection * impulse, ForceMode.Impulse);
     }
     public void InteractWithRope(Collider handle)
     {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using TMPro;
@@ -10,14 +11,16 @@ public class PlayerPickup : MonoBehaviour
 
     //box pick up
     private Rigidbody box;
-    private Collider boxCollider;
     public Transform holdPoint;
     public TMP_Text prompt;
     public float pickupDistance = 3f;
+    [SerializeField, Min(0f)] private float carryDistance = 1.5f;
     public float followStrength = 28f;
     public float maxCarrySpeed = 65f;
 
     private RigidbodyConstraints originalConstraints;
+    private Quaternion heldFaceToBoxRotation;
+    private readonly List<(Collider boxCollider, Collider playerCollider)> ignoredCarryCollisions = new();
     private bool holdingBox;
     public bool IsHoldingBox => holdingBox;
     public Rigidbody HeldBox => holdingBox ? box : null;
@@ -84,8 +87,21 @@ public class PlayerPickup : MonoBehaviour
         if (!holdingBox)
             return;
 
-        Vector3 difference =
-            holdPoint.position - box.worldCenterOfMass;
+        if (box == null)
+        {
+            DropBox();
+            return;
+        }
+
+        Quaternion targetRotation = Quaternion.LookRotation(DirectionToPlayer(), Vector3.up)
+                                    * heldFaceToBoxRotation;
+        box.MoveRotation(targetRotation);
+
+        // Use the new rotation when the collider is offset from the box's pivot.
+        Vector3 rotatedCenterOfMass = box.position + targetRotation * box.centerOfMass;
+        Vector3 localHoldPosition = transform.InverseTransformPoint(holdPoint.position);
+        localHoldPosition.z = carryDistance;
+        Vector3 difference = transform.TransformPoint(localHoldPosition) - rotatedCenterOfMass;
 
         // Keep the correction within the distance to the hold point in one physics step.
         float correctionRate = Mathf.Min(followStrength, 1f / Time.fixedDeltaTime);
@@ -103,6 +119,13 @@ public class PlayerPickup : MonoBehaviour
         SetOutline(null);
         originalConstraints = box.constraints;
 
+        // Imported boxes can use a different local axis for their top face.
+        Quaternion worldToBox = Quaternion.Inverse(box.rotation);
+        Vector3 localUp = ClosestBoxAxis(worldToBox * Vector3.up);
+        Vector3 localSide = Vector3.ProjectOnPlane(worldToBox * DirectionToPlayer(), localUp);
+        Vector3 localFace = ClosestBoxAxis(localSide);
+        heldFaceToBoxRotation = Quaternion.Inverse(Quaternion.LookRotation(localFace, localUp));
+
         box.isKinematic = false;
         box.detectCollisions = true;
         box.useGravity = false;
@@ -113,35 +136,69 @@ public class PlayerPickup : MonoBehaviour
         box.angularVelocity = Vector3.zero;
         box.constraints = RigidbodyConstraints.FreezeRotation;
 
-        // Ignore the player's body while carrying.
-        Physics.IgnoreCollision(
-            boxCollider,
-            GetComponent<CharacterController>(),
-            true
-        );
+        Collider[] playerColliders = GetComponentsInChildren<Collider>();
+        foreach (Collider boxCollider in box.GetComponentsInChildren<Collider>())
+        {
+            if (boxCollider.attachedRigidbody != box || !boxCollider.enabled || boxCollider.isTrigger)
+                continue;
+
+            foreach (Collider playerCollider in playerColliders)
+            {
+                if (!playerCollider.enabled || playerCollider.isTrigger ||
+                    Physics.GetIgnoreCollision(boxCollider, playerCollider))
+                    continue;
+
+                Physics.IgnoreCollision(boxCollider, playerCollider, true);
+                ignoredCarryCollisions.Add((boxCollider, playerCollider));
+            }
+        }
+    }
+
+    private Vector3 DirectionToPlayer()
+    {
+        Vector3 direction = transform.position - box.worldCenterOfMass;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.001f)
+            direction = Vector3.ProjectOnPlane(-transform.forward, Vector3.up);
+
+        return direction;
+    }
+
+    private static Vector3 ClosestBoxAxis(Vector3 direction)
+    {
+        Vector3 absolute = new Vector3(Mathf.Abs(direction.x), Mathf.Abs(direction.y), Mathf.Abs(direction.z));
+        if (absolute.x >= absolute.y && absolute.x >= absolute.z)
+            return Vector3.right * Mathf.Sign(direction.x);
+        if (absolute.y >= absolute.z)
+            return Vector3.up * Mathf.Sign(direction.y);
+
+        return Vector3.forward * Mathf.Sign(direction.z);
     }
 
     void DropBox()
     {
         holdingBox = false;
 
-        box.useGravity = true;
-        box.constraints = originalConstraints;
-        box.linearVelocity = Vector3.zero;
-        box.GetComponent<BoxImpactPhysics>()?.BeginDrop();
-        box.angularVelocity = Vector3.zero;
+        if (box != null)
+        {
+            box.useGravity = true;
+            box.constraints = originalConstraints;
+            box.linearVelocity = Vector3.zero;
+            box.GetComponent<BoxImpactPhysics>()?.BeginDrop();
+            box.angularVelocity = Vector3.zero;
+        }
 
-        Physics.IgnoreCollision(
-            boxCollider,
-            GetComponent<CharacterController>(),
-            false
-        );
+        foreach (var (boxCollider, playerCollider) in ignoredCarryCollisions)
+        {
+            if (boxCollider != null && playerCollider != null)
+                Physics.IgnoreCollision(boxCollider, playerCollider, false);
+        }
+        ignoredCarryCollisions.Clear();
     }
 
     void FindNearestBox()
     {
         box = null;
-        boxCollider = null;
 
         float closestDistance = pickupDistance;
 
@@ -169,7 +226,6 @@ public class PlayerPickup : MonoBehaviour
             {
                 closestDistance = distance;
                 box = body;
-                boxCollider = candidate;
             }
         }
     }
@@ -190,6 +246,9 @@ public class PlayerPickup : MonoBehaviour
 
     private void OnDisable()
     {
+        if (holdingBox)
+            DropBox();
+
         SetOutline(null);
     }
 
