@@ -241,6 +241,10 @@ public class RopeMoment : MonoBehaviour
         OnPointsChanged?.Invoke();
     }
 
+    public void AddGrabBend(Vector3 kick)
+    {
+    }
+
     void OnValidate()
     {
         InitializeComponents();
