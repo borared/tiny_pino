@@ -25,6 +25,13 @@ public class PlayerController : MonoBehaviour
     private bool collectingBoxContacts;
     private float feetBeforeMove;
 
+    [Header("Stick & Slippery Surface Balance")]
+    [Tooltip("LayerMask used to check the ground/stick beneath the player's feet.")]
+    public LayerMask groundCheckLayers = ~0;
+    private Vector3 slipVelocity;
+    private SlipperyStick activeSlipperyStick;
+    private Vector3 groundNormal = Vector3.up;
+
     [Header("Visual Model & Free-Rotate Movement")]
     [Tooltip("The visual model container (or torso/mesh) that rotates towards WASD movement direction.")]
     public Transform visualModel;
@@ -144,26 +151,55 @@ public class PlayerController : MonoBehaviour
 
         if (IsHoldingRope) return;
 
+        // Check if player is standing on a narrow/slippery stick
+        CheckGroundSurface();
+
         // Stop downward velocity from building up while on the ground.
         if (controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -2f;
         }
 
+        bool jumpPressed = keyboard != null && keyboard.spaceKey.wasPressedThisFrame;
+
         //check jump and placed after holding rope check since there is no space key option when climbing rope
-        if (keyboard != null)
+        if (jumpPressed && controller.isGrounded)
         {
-            if (keyboard.spaceKey.wasPressedThisFrame && controller.isGrounded)
+            verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            jumpedFromGround = true;
+            jumpingWithFan = fanRotation != null && touchedFanBelow;
+
+            if (activeSlipperyStick != null && activeSlipperyStick.jumpingCausesSlip)
             {
-                verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
-                jumpedFromGround = true;
-                jumpingWithFan = fanRotation != null && touchedFanBelow;
+                slipVelocity = activeSlipperyStick.CalculateSlip(transform.position, walkDirection * speed, groundNormal, true);
             }
         }
 
         //horizontal movement relative to the player's facing direction.
-
         Vector3 movement = walkDirection * speed;
+
+        // Apply slippery surface balance and deflection physics
+        if (activeSlipperyStick != null && controller.isGrounded)
+        {
+            Vector3 calculatedSlip = activeSlipperyStick.CalculateSlip(transform.position, movement, groundNormal, false);
+            if (calculatedSlip.sqrMagnitude > 0.01f)
+            {
+                // Gradually increase slip force when rushing or near edge
+                slipVelocity = Vector3.Lerp(slipVelocity, calculatedSlip, Time.deltaTime * 8f);
+            }
+            else
+            {
+                // Balanced / moving slow - recover balance
+                slipVelocity = Vector3.MoveTowards(slipVelocity, Vector3.zero, Time.deltaTime * 20f);
+            }
+        }
+        else
+        {
+            // Decelerate slip once airborne or on normal ground
+            slipVelocity = Vector3.MoveTowards(slipVelocity, Vector3.zero, Time.deltaTime * 15f);
+        }
+
+        movement += slipVelocity;
 
         //gravity changes vertical speed over time.
         verticalVelocity += gravity * Time.deltaTime;
@@ -427,6 +463,21 @@ public class PlayerController : MonoBehaviour
         {
             Quaternion rightBrace = initialRightLegRot * Quaternion.Euler(-28f - 16f * reach, 0f, -12f);
             rightLeg.localRotation = Quaternion.Slerp(rightLeg.localRotation, rightBrace, blend);
+        }
+    }
+
+    private void CheckGroundSurface()
+    {
+        activeSlipperyStick = null;
+        groundNormal = Vector3.up;
+
+        Vector3 origin = transform.position + Vector3.up * 0.2f;
+        float checkDist = 0.6f;
+
+        if (Physics.SphereCast(origin, 0.25f, Vector3.down, out RaycastHit hit, checkDist, groundCheckLayers, QueryTriggerInteraction.Ignore))
+        {
+            groundNormal = hit.normal;
+            activeSlipperyStick = hit.collider.GetComponentInParent<SlipperyStick>();
         }
     }
 
