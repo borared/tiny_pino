@@ -5,6 +5,8 @@ using UnityEngine.InputSystem;
 // [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
+    [SerializeField] private WinMenuManager winMenuManager;
+
     //player control
     public float speed = 35f;
     public float jumpHeight = 2f;
@@ -430,6 +432,10 @@ public class PlayerController : MonoBehaviour
 
     void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        // Win menu
+        if (winMenuManager != null)
+            winMenuManager.CheckGoalHit(hit.collider);
+
         //fan switch
         if (verticalVelocity > 0f && hit.collider.TryGetComponent<FanSwitch>(out var fanSwitch))
         {
