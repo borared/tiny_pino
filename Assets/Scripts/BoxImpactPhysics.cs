@@ -8,6 +8,8 @@ public class BoxImpactPhysics : MonoBehaviour
     [SerializeField] private float dropGravity = 45f;
 
     private static readonly HashSet<int> BoxColliders = new HashSet<int>();
+    private static readonly Dictionary<int, HashSet<int>> CarriedBoxContacts = new();
+    private static bool contactCallbacksEnabled;
     private Rigidbody body;
     private BoxCollider boxCollider;
     private int colliderId;
@@ -25,13 +27,8 @@ public class BoxImpactPhysics : MonoBehaviour
     {
         lock (BoxColliders)
         {
-            if (BoxColliders.Count == 0)
-            {
-                Physics.ContactModifyEvent += ModifyContacts;
-                Physics.ContactModifyEventCCD += ModifyCcdContacts;
-            }
-
             BoxColliders.Add(colliderId);
+            UpdateContactCallbacks();
         }
 
         boxCollider.hasModifiableContacts = true;
@@ -44,13 +41,54 @@ public class BoxImpactPhysics : MonoBehaviour
         lock (BoxColliders)
         {
             BoxColliders.Remove(colliderId);
-
-            if (BoxColliders.Count == 0)
-            {
-                Physics.ContactModifyEvent -= ModifyContacts;
-                Physics.ContactModifyEventCCD -= ModifyCcdContacts;
-            }
+            UpdateContactCallbacks();
         }
+    }
+
+    internal static void RegisterCarriedBox(Rigidbody carriedBox)
+    {
+        // Capture IDs on the main thread, including pickupables without BoxImpactPhysics.
+        var otherBoxes = new HashSet<int>();
+        foreach (GameObject pickupable in GameObject.FindGameObjectsWithTag("Pickupable"))
+        {
+            if (pickupable.TryGetComponent(out Rigidbody otherBox) && otherBox != carriedBox)
+                otherBoxes.Add(otherBox.GetInstanceID());
+        }
+
+        lock (BoxColliders)
+        {
+            CarriedBoxContacts[carriedBox.GetInstanceID()] = otherBoxes;
+            UpdateContactCallbacks();
+        }
+    }
+
+    internal static void UnregisterCarriedBox(int bodyId)
+    {
+        lock (BoxColliders)
+        {
+            CarriedBoxContacts.Remove(bodyId);
+            UpdateContactCallbacks();
+        }
+    }
+
+    private static void UpdateContactCallbacks()
+    {
+        bool enabled = BoxColliders.Count > 0 || CarriedBoxContacts.Count > 0;
+        if (enabled == contactCallbacksEnabled)
+            return;
+
+        if (enabled)
+        {
+            Physics.ContactModifyEvent += ModifyContacts;
+            Physics.ContactModifyEventCCD += ModifyCcdContacts;
+        }
+        else
+        {
+            Physics.ContactModifyEvent -= ModifyContacts;
+            Physics.ContactModifyEventCCD -= ModifyCcdContacts;
+        }
+
+        contactCallbacksEnabled = enabled;
     }
 
     private static void ModifyContacts(
@@ -72,28 +110,52 @@ public class BoxImpactPhysics : MonoBehaviour
         foreach (var contactPair in pairs)
         {
             var pair = contactPair;
-            int firstId = pair.colliderInstanceID;
-            int secondId = pair.otherColliderInstanceID;
-
-            lock (BoxColliders)
-            {
-                if (!BoxColliders.Contains(firstId) || !BoxColliders.Contains(secondId))
-                    continue;
-            }
-
             if (pair.contactCount == 0)
                 continue;
 
-            Vector3 normal = pair.GetNormal(0) * normalSign;
-            float firstApproach = -Vector3.Dot(pair.bodyVelocity, normal);
-            float secondApproach = Vector3.Dot(pair.otherBodyVelocity, normal);
+            int firstId = pair.colliderInstanceID;
+            int secondId = pair.otherColliderInstanceID;
+            bool firstCarried;
+            bool secondCarried;
 
-            // The upper box absorbs vertical impacts even when the stack bounces.
-            bool firstBoxResponds = normal.y > 0f;
-            if (Mathf.Abs(normal.y) <= 0.5f)
-                firstBoxResponds = Mathf.Abs(firstApproach - secondApproach) < 0.02f
-                    ? firstId < secondId
-                    : firstApproach > secondApproach;
+            lock (BoxColliders)
+            {
+                int firstBody = pair.bodyInstanceID;
+                int secondBody = pair.otherBodyInstanceID;
+                firstCarried = CarriedBoxContacts.TryGetValue(firstBody, out var firstContacts) &&
+                    firstContacts.Contains(secondBody);
+                secondCarried = CarriedBoxContacts.TryGetValue(secondBody, out var secondContacts) &&
+                    secondContacts.Contains(firstBody);
+
+                if (firstCarried == secondCarried &&
+                    (!BoxColliders.Contains(firstId) || !BoxColliders.Contains(secondId)))
+                    continue;
+            }
+
+            // Yield to the stack while the hold point is driving one of the boxes.
+            bool firstBoxResponds = firstCarried;
+            if (firstCarried != secondCarried)
+            {
+                // Let the carried box slide out from under the stack.
+                for (int i = 0; i < pair.contactCount; i++)
+                {
+                    pair.SetStaticFriction(i, 0f);
+                    pair.SetDynamicFriction(i, 0f);
+                }
+            }
+            else
+            {
+                Vector3 normal = pair.GetNormal(0) * normalSign;
+                float firstApproach = -Vector3.Dot(pair.bodyVelocity, normal);
+                float secondApproach = Vector3.Dot(pair.otherBodyVelocity, normal);
+
+                // The upper box absorbs vertical impacts even when the stack bounces.
+                firstBoxResponds = normal.y > 0f;
+                if (Mathf.Abs(normal.y) <= 0.5f)
+                    firstBoxResponds = Mathf.Abs(firstApproach - secondApproach) < 0.02f
+                        ? firstId < secondId
+                        : firstApproach > secondApproach;
+            }
 
             var mass = pair.massProperties;
             if (firstBoxResponds)

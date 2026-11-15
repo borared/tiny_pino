@@ -21,6 +21,8 @@ public class PlayerPickup : MonoBehaviour
     private RigidbodyConstraints originalConstraints;
     private Quaternion heldFaceToBoxRotation;
     private readonly List<(Collider boxCollider, Collider playerCollider)> ignoredCarryCollisions = new();
+    private readonly List<Collider> modifiedCarryColliders = new();
+    private int carriedBoxId;
     private bool holdingBox;
     public bool IsHoldingBox => holdingBox;
     public Rigidbody HeldBox => holdingBox ? box : null;
@@ -136,11 +138,20 @@ public class PlayerPickup : MonoBehaviour
         box.angularVelocity = Vector3.zero;
         box.constraints = RigidbodyConstraints.FreezeRotation;
 
+        carriedBoxId = box.GetInstanceID();
+        BoxImpactPhysics.RegisterCarriedBox(box);
+
         Collider[] playerColliders = GetComponentsInChildren<Collider>();
         foreach (Collider boxCollider in box.GetComponentsInChildren<Collider>())
         {
             if (boxCollider.attachedRigidbody != box || !boxCollider.enabled || boxCollider.isTrigger)
                 continue;
+
+            if (!boxCollider.hasModifiableContacts)
+            {
+                boxCollider.hasModifiableContacts = true;
+                modifiedCarryColliders.Add(boxCollider);
+            }
 
             foreach (Collider playerCollider in playerColliders)
             {
@@ -178,6 +189,13 @@ public class PlayerPickup : MonoBehaviour
     void DropBox()
     {
         holdingBox = false;
+        BoxImpactPhysics.UnregisterCarriedBox(carriedBoxId);
+        foreach (Collider collider in modifiedCarryColliders)
+        {
+            if (collider != null)
+                collider.hasModifiableContacts = false;
+        }
+        modifiedCarryColliders.Clear();
 
         if (box != null)
         {
