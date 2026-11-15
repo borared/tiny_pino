@@ -45,7 +45,7 @@ public class TextHoverEffect : MonoBehaviour
 
     void Start()
     {
-        SetupButton(startGameText, ref startGameNormal, ref startOriginalScale, OnStartEnter, OnStartExit, OnStartClick);
+        SetupButton(startGameText, ref startGameNormal, ref startOriginalScale, OnStartEnter, OnStartExit, null);
         SetupButton(quitText, ref quitNormal, ref quitOriginalScale, OnQuitEnter, OnQuitExit, OnQuitClick);
     }
 
@@ -81,9 +81,15 @@ public class TextHoverEffect : MonoBehaviour
         trigger.triggers.Add(exitEntry);
 
         // Click
-        EventTrigger.Entry clickEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-        clickEntry.callback.AddListener(onClick);
-        trigger.triggers.Add(clickEntry);
+        if (onClick != null)
+        {
+            var clickEntry = new EventTrigger.Entry
+            {
+                eventID = EventTriggerType.PointerClick
+            };
+            clickEntry.callback.AddListener(onClick);
+            trigger.triggers.Add(clickEntry);
+        }
 
         // Initial appearance
         textComp.text = defaultText;
@@ -106,12 +112,6 @@ public class TextHoverEffect : MonoBehaviour
         startGameText.text = startGameNormal;
         if (changeColor) startGameText.color = normalColor;
         if (scaleOnHover) startGameText.transform.localScale = startOriginalScale;
-    }
-
-    public void OnStartClick(BaseEventData data)
-    {
-        if (menuManager != null)
-            menuManager.StartGame();
     }
 
     // --- Quit Visual Hover Actions ---
