@@ -21,9 +21,9 @@ Tiny Little Pino is a third-person obstacle course made in Unity for the CADT mi
 | E / Q | Climb up / down while holding a rope |
 | Esc | Pause or resume. You can also select **Continue** in the pause menu. |
 
-## Play the Windows build
+## Play the Windows or MacOS build
 
-1. Download the ZIP from the [project links](#project-links) below.
+1. Download the ZIP from the [Google Drive](https://drive.google.com/drive/folders/136_yw8DHv8q6uCOkw6umcm1OxRdEb3Zs?usp=sharing) below.
 2. Extract the whole archive into a folder. Keep the executable, its `_Data` folder, and the other build files together.
 3. Open the game's `.exe` and select **Start Game**.
 
