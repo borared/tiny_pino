@@ -45,7 +45,8 @@ public class PlayerPickup : MonoBehaviour
     void Start()
     {
         ropePlayer = GetComponent<PlayerController>();
-        prompt.gameObject.SetActive(false);
+        if (prompt != null)
+            prompt.gameObject.SetActive(false);
 
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
@@ -76,16 +77,19 @@ public class PlayerPickup : MonoBehaviour
 
         SetOutline(nextOutline);
 
-        prompt.gameObject.SetActive(holdingBox || nearSwitch || nearBox);
+        if (prompt != null)
+        {
+            prompt.gameObject.SetActive(holdingBox || nearSwitch || nearBox);
 
-        if (holdingBox)
-            prompt.text = "Press F to drop";
-        else if (nearSwitch)
-            prompt.text = fanSwitch.IsOn
-                ? "Press F to turn off switch"
-                : "Press F to turn on switch";
-        else
-            prompt.text = "Press F to pick up";
+            if (holdingBox)
+                prompt.text = "Press F to drop";
+            else if (nearSwitch)
+                prompt.text = fanSwitch.IsOn
+                    ? "Press F to turn off switch"
+                    : "Press F to turn on switch";
+            else
+                prompt.text = "Press F to pick up";
+        }
 
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null || !keyboard.fKey.wasPressedThisFrame)
