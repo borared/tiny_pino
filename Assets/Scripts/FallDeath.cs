@@ -10,6 +10,12 @@ public class FallDeath : MonoBehaviour
     [SerializeField, Min(0.1f)] private float lethalFallDistance = 80f;
     [SerializeField] private GameObject loseMenu;
 
+    [Header("Audio SFX")]
+    [Tooltip("Sound played upon lethal fall impact / death.")]
+    public AudioClip deathSFX;
+    [Range(0f, 2f)] public float sfxVolume = 1f;
+    private AudioSource audioSource;
+
     private CharacterController characterController;
     private PlayerController playerController;
     private PlayerPickup playerPickup;
@@ -32,6 +38,13 @@ public class FallDeath : MonoBehaviour
         Camera playerCamera = GetComponentInChildren<Camera>();
         if (playerCamera != null)
             deathCamera = playerCamera.transform;
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D direct stereo sound for crisp impact everywhere
 
         if (playerController == null)
             return;
@@ -74,6 +87,11 @@ public class FallDeath : MonoBehaviour
     {
         isDead = true;
         Bounds capsuleBounds = characterController.bounds;
+
+        if (deathSFX != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(deathSFX, sfxVolume);
+        }
 
         if (playerController != null)
             playerController.enabled = false;
