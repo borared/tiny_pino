@@ -58,6 +58,9 @@ public class PlayerPickup : MonoBehaviour
 
     void Update()
     {
+        if (Time.timeScale == 0f)
+            return;
+
         if (TryHandleRope())
             return;
         bool nearSwitch = !holdingBox && fanSwitch != null &&

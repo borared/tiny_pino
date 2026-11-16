@@ -50,7 +50,7 @@ public class FallDeath : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (isDead || characterController == null || !characterController.enabled)
+        if (Time.timeScale == 0f || isDead || characterController == null || !characterController.enabled)
             return;
 
         float currentHeight = transform.position.y;
