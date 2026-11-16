@@ -34,10 +34,25 @@ public class PlayerPickup : MonoBehaviour
     [SerializeField] private FanSwitch fanSwitch;
     [SerializeField] private float switchDistance = 12f;
 
+    [Header("Audio SFX")]
+    [Tooltip("Sound played when picking up a box.")]
+    public AudioClip pickupBoxSFX;
+    [Tooltip("Sound played when dropping a box (optional).")]
+    public AudioClip dropBoxSFX;
+    [Range(0f, 1f)] public float sfxVolume = 1f;
+    private AudioSource audioSource;
+
     void Start()
     {
         ropePlayer = GetComponent<PlayerController>();
         prompt.gameObject.SetActive(false);
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D crisp sound effect
     }
 
     void Update()
@@ -141,6 +156,11 @@ public class PlayerPickup : MonoBehaviour
         carriedBoxId = box.GetInstanceID();
         BoxImpactPhysics.RegisterCarriedBox(box);
 
+        if (pickupBoxSFX != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(pickupBoxSFX, sfxVolume);
+        }
+
         Collider[] playerColliders = GetComponentsInChildren<Collider>();
         foreach (Collider boxCollider in box.GetComponentsInChildren<Collider>())
         {
@@ -188,6 +208,11 @@ public class PlayerPickup : MonoBehaviour
 
     void DropBox()
     {
+        if (holdingBox && dropBoxSFX != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(dropBoxSFX, sfxVolume);
+        }
+
         holdingBox = false;
         BoxImpactPhysics.UnregisterCarriedBox(carriedBoxId);
         foreach (Collider collider in modifiedCarryColliders)
