@@ -78,5 +78,5 @@ Model credits are recorded in the names of the imported folders under [Assets/Re
 | Deliverable | Link |
 | --- | --- |
 | Source repository | [Tiny Little Pino on GitHub](https://github.com/borared/tiny_pino) |
-| Gameplay video | *Add the YouTube or Google Drive URL.* |
-| Playable Windows build | *Add the ZIP download URL from Google Drive or GitHub Releases.* |
+| Gameplay video | [https://www.youtube.com/watch?v=teZDpx8qWY4](https://www.youtube.com/watch?v=teZDpx8qWY4) |
+| Playable Windows build | [Google Drive](https://drive.google.com/drive/folders/136_yw8DHv8q6uCOkw6umcm1OxRdEb3Zs?usp=sharing) |
