@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public class MainMenuManager : MonoBehaviour
 {
+    private static string startImmediatelyScenePath;
+
     [Header("Menu Panel / Canvas")]
     [Tooltip("The menu GameObject to hide when the game starts.")]
     public GameObject menuPanel;
@@ -19,6 +21,17 @@ public class MainMenuManager : MonoBehaviour
 
     private bool gameStarted = false;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStartImmediatelyScene()
+    {
+        startImmediatelyScenePath = null;
+    }
+
+    internal static void StartImmediatelyOnReload(string scenePath)
+    {
+        startImmediatelyScenePath = scenePath;
+    }
+
     void Awake()
     {
         if (menuPanel == null)
@@ -29,6 +42,13 @@ public class MainMenuManager : MonoBehaviour
 
         if (mouseLook == null)
             mouseLook = FindFirstObjectByType<MouseLook>();
+
+        if (startImmediatelyScenePath == gameObject.scene.path)
+        {
+            startImmediatelyScenePath = null;
+            StartGame();
+            return;
+        }
 
         // Freeze player movement and camera look while in the menu
         if (playerController != null)

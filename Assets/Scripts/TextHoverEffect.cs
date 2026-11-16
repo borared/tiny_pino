@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 /// <summary>
 /// Handles UI visual hover effects: changing text strings (e.g. adding '> <'),
@@ -20,6 +21,7 @@ public class TextHoverEffect : MonoBehaviour
     public string startGameHover = "> Start Game <";
 
     [Header("Quit Button")]
+    [SerializeField] private Button quitButton;
     [Tooltip("TMP Text component for Quit")]
     public TMP_Text quitText;
     public string quitNormal = "Quit";
@@ -46,7 +48,10 @@ public class TextHoverEffect : MonoBehaviour
     void Start()
     {
         SetupButton(startGameText, ref startGameNormal, ref startOriginalScale, OnStartEnter, OnStartExit, null);
-        SetupButton(quitText, ref quitNormal, ref quitOriginalScale, OnQuitEnter, OnQuitExit, OnQuitClick);
+        if (quitButton != null)
+            SetupButton(quitText, ref quitNormal, ref quitOriginalScale, OnQuitEnter, OnQuitExit, null, quitButton.gameObject);
+        else
+            SetupButton(quitText, ref quitNormal, ref quitOriginalScale, OnQuitEnter, OnQuitExit, OnQuitClick);
     }
 
     private void SetupButton(
@@ -55,7 +60,8 @@ public class TextHoverEffect : MonoBehaviour
         ref Vector3 originalScale,
         UnityEngine.Events.UnityAction<BaseEventData> onEnter,
         UnityEngine.Events.UnityAction<BaseEventData> onExit,
-        UnityEngine.Events.UnityAction<BaseEventData> onClick)
+        UnityEngine.Events.UnityAction<BaseEventData> onClick,
+        GameObject eventTarget = null)
     {
         if (textComp == null) return;
 
@@ -66,9 +72,10 @@ public class TextHoverEffect : MonoBehaviour
 
         originalScale = textComp.transform.localScale;
 
-        EventTrigger trigger = textComp.gameObject.GetComponent<EventTrigger>();
+        GameObject target = eventTarget != null ? eventTarget : textComp.gameObject;
+        EventTrigger trigger = target.GetComponent<EventTrigger>();
         if (trigger == null)
-            trigger = textComp.gameObject.AddComponent<EventTrigger>();
+            trigger = target.AddComponent<EventTrigger>();
 
         // Hover enter
         EventTrigger.Entry enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
